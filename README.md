@@ -27,7 +27,9 @@ private_list = []
 enable_temp = false
 ```
 
-你需要的就是把template_config.toml
+你需要的就是把template_config.toml复制到根目录，然后改
+
+至于requirements，需要maim_message，安装略
 
 # TO DO List
 - [x] 读取自动心跳测试连接
