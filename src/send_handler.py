@@ -14,13 +14,13 @@ from maim_message import (
     MessageBase,
 )
 
+from .utils import get_image_format, convert_image_to_gif
 
 class SendHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
 
     async def handle_seg(self, raw_message_base_str: str) -> None:
-        logger.critical(raw_message_base_str)
         raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_str)
         message_info: BaseMessageInfo = raw_message_base.message_info
         message_segment: Seg = raw_message_base.message_segment
@@ -127,9 +127,13 @@ class SendHandler:
 
     def handle_emoji_message(self, encoded_emoji: str) -> dict:
         """处理表情消息"""
+        encoded_image = encoded_emoji
+        image_format = get_image_format(encoded_emoji)
+        if image_format != 'gif':
+            encoded_image = convert_image_to_gif(encoded_emoji)
         return {
             "type": "image",
-            "data": {"file": f"base64://{encoded_emoji}", "subtype": 1},
+            "data": {"file": f"base64://{encoded_image}", "subtype": 1},
         }
 
     async def test_send(self):
@@ -145,7 +149,7 @@ class SendHandler:
         else:
             logger.warning(f"消息发送失败，napcat返回：{str(response)}")
 
-    async def send_message_to_napcat(self, action: str, params: dict) -> None:
+    async def send_message_to_napcat(self, action: str, params: dict) -> dict:
         payload = json.dumps({"action": action, "params": params})
         await self.server_connection.send(payload)
         response = await get_response()

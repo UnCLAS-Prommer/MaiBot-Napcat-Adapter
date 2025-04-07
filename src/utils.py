@@ -2,6 +2,7 @@ import websockets.asyncio.server as Server
 import json
 import base64
 from .logger import logger
+from .message_queue import get_response
 
 import requests
 import ssl
@@ -9,6 +10,7 @@ from requests.adapters import HTTPAdapter
 
 from PIL import Image
 import io
+
 
 class SSLAdapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
@@ -35,9 +37,9 @@ async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> d
     """
     payload = json.dumps({"action": "get_group_info", "params": {"group_id": group_id}})
     await websocket.send(payload)
-    socket_response = await websocket.recv()
+    socket_response: dict = await get_response()
     logger.debug(socket_response)
-    return json.loads(socket_response).get("data")
+    return socket_response.get("data")
 
 
 async def get_member_info(
@@ -55,9 +57,9 @@ async def get_member_info(
         }
     )
     await websocket.send(payload)
-    socket_response = await websocket.recv()
+    socket_response: dict = await get_response()
     logger.debug(socket_response)
-    return json.loads(socket_response).get("data")
+    return socket_response.get("data")
 
 
 async def get_image_base64(url: str) -> str:
@@ -65,10 +67,7 @@ async def get_image_base64(url: str) -> str:
     try:
         sess = requests.session()
         sess.mount("https://", SSLAdapter())  # 将上面定义的SSLAdapter 应用起来
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        }
-        response = sess.get(url, headers=headers, timeout=10, verify=True)
+        response = sess.get(url, timeout=10, verify=True)
         response.raise_for_status()
         image_bytes = response.content
         return base64.b64encode(image_bytes).decode("utf-8")
@@ -77,16 +76,30 @@ async def get_image_base64(url: str) -> str:
         raise
 
 
+def convert_image_to_gif(image_base64: str) -> str:
+    try:
+        image_bytes = base64.b64decode(image_base64)
+        image = Image.open(io.BytesIO(image_bytes))
+        output_buffer = io.BytesIO()
+        image.save(output_buffer, format="GIF")
+        output_buffer.seek(0)
+        return base64.b64encode(output_buffer.read()).decode("utf-8")
+    except Exception as e:
+        logger.error(f"图片转换为GIF失败: {str(e)}")
+        return image_base64
+
+
 async def get_self_info(websocket: Server.ServerConnection) -> str:
     """
     获取自身信息
     """
     payload = json.dumps({"action": "get_login_info", "params": {}})
     await websocket.send(payload)
-    response = await websocket.recv()
+    response: dict = await get_response()
     logger.debug(response)
-    return json.loads(response).get("data")
+    return response.get("data")
 
-async def get_image_format(raw_data: str) -> str:
+
+def get_image_format(raw_data: str) -> str:
     image_bytes = base64.b64decode(raw_data)
     return Image.open(io.BytesIO(image_bytes)).format.lower()

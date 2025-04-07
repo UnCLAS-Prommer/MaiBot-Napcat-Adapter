@@ -1,9 +1,9 @@
-import queue
 import asyncio
 
-recv_queue = queue.Queue()
+recv_queue = asyncio.Queue()
+message_queue = asyncio.Queue()
 
 async def get_response():
-    while recv_queue.empty():
-        await asyncio.sleep(0.5)
-    return recv_queue.get()
+    response = await recv_queue.get()
+    recv_queue.task_done()
+    return response

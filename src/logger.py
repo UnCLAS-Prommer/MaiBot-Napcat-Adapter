@@ -13,4 +13,4 @@ def handle_output(message: str):
         logger.info(message)
 
 
-builtins.print = handle_output
+# builtins.print = handle_output
