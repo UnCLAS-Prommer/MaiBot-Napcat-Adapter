@@ -16,6 +16,7 @@ from maim_message import (
 
 from .utils import get_image_format, convert_image_to_gif
 
+
 class SendHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
@@ -129,11 +130,15 @@ class SendHandler:
         """处理表情消息"""
         encoded_image = encoded_emoji
         image_format = get_image_format(encoded_emoji)
-        if image_format != 'gif':
+        if image_format != "gif":
             encoded_image = convert_image_to_gif(encoded_emoji)
         return {
             "type": "image",
-            "data": {"file": f"base64://{encoded_image}", "subtype": 1},
+            "data": {
+                "file": f"base64://{encoded_image}",
+                "subtype": 1,
+                "summary": "[动画表情]",
+            },
         }
 
     async def test_send(self):
