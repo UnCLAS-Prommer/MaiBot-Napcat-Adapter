@@ -11,4 +11,8 @@ RUN uv pip install --system --upgrade pip
 RUN uv pip install --system -e /maim_message
 RUN uv pip install --system -r /requirements.txt
 
+WORKDIR /adapters
+
+COPY . .
+
 ENTRYPOINT ["python", "main.py"]
