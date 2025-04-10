@@ -6,7 +6,7 @@ import json
 import websockets.asyncio.server as Server
 from typing import List, Tuple
 
-from . import MetaEventType, RealMessageType, MessageType
+from . import MetaEventType, RealMessageType, MessageType, NoticeType
 from maim_message import (
     UserInfo,
     GroupInfo,
@@ -245,9 +245,6 @@ class RecvHandler:
                     # 预计等价于戳一戳
                     logger.warning("暂时不支持窗口抖动解析")
                     pass
-                case RealMessageType.poke:
-                    logger.warning("暂时不支持戳一戳解析")
-                    pass
                 case RealMessageType.share:
                     logger.warning("链接分享？啊？你搞我啊？")
                     pass
@@ -357,7 +354,23 @@ class RecvHandler:
                 else:
                     return None
 
-    async def handle_poke_message(self) -> None:
+    async def handle_notify(self, raw_message: dict) -> None:
+        notice_type = raw_message.get("notice_type")
+        match notice_type:
+            case NoticeType.friend_recall:
+                logger.info("用户撤回一条消息")
+                pass
+            case NoticeType.group_recall:
+                logger.info("群内用户撤回一条消息")
+                pass
+            case NoticeType.Notify:
+                sub_type = raw_message.get("sub_type")
+                match sub_type:
+                    case NoticeType.Notify.poke:
+                        logger.info("用户戳了一戳")
+                        pass
+        
+    async def handle_poke_notify(self) -> None:
         pass
 
     async def handle_forward_message(self, message_list: list) -> Seg:

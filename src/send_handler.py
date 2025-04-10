@@ -27,34 +27,43 @@ class SendHandler:
         message_segment: Seg = raw_message_base.message_segment
         group_info: GroupInfo = message_info.group_info
         user_info: UserInfo = message_info.user_info
+        target_id: int = None
+        action: str = None
+        id_name: str = None
 
-        if group_info and user_info:
-            # 处理群聊消息
-            # return
+        try:
             processed_message: list = await self.handle_seg_recursive(message_segment)
-            if processed_message:
-                response = await self.send_message_to_napcat(
-                    "send_group_msg",
-                    {
-                        "group_id": group_info.group_id,
-                        "message": processed_message,
-                    },
-                )
-                if response.get("status") == "ok":
-                    logger.info("消息发送成功")
-                else:
-                    logger.warning(f"消息发送失败，napcat返回：{str(response)}")
-            else:
-                logger.critical("现在暂时不支持解析此回复！")
-                return None
-        elif user_info:
-            # 处理私聊消息
-            logger.critical("私聊消息暂时无效")
-            return None
-            # processed_message = await self.handle_seg_recursive(message_segment)
-        else:
-            logger.error("无法识别的消息类型")
+        except Exception as e:
+            logger.error(f"处理消息时发生错误: {e}")
             return
+
+        if processed_message:
+            if group_info and user_info:
+                target_id = group_info.group_id
+                action = "send_group_msg"
+                id_name = "group_id"
+            elif user_info:
+                target_id = user_info.user_id
+                action = "send_private_msg"
+                id_name = "user_id"
+            else:
+                logger.error("无法识别的消息类型")
+                return
+
+            response = await self.send_message_to_napcat(
+                action,
+                {
+                    id_name: target_id,
+                    "message": processed_message,
+                },
+            )
+            if response.get("status") == "ok":
+                logger.info("消息发送成功")
+            else:
+                logger.warning(f"消息发送失败，napcat返回：{str(response)}")
+        else:
+            logger.critical("现在暂时不支持解析此回复！")
+            return None
 
     def get_level(self, seg_data: Seg) -> int:
         if seg_data.type == "seglist":

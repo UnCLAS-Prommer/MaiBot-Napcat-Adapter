@@ -36,7 +36,7 @@ async def message_process():
         elif post_type == "meta_event":
             await recv_handler.handle_meta_event(message)
         elif post_type == "notice":
-            pass
+            await recv_handler.handle_notify(message)
         else:
             logger.warning(f"未知的post_type: {post_type}")
         message_queue.task_done()
