@@ -14,7 +14,7 @@ async def message_recv(server_connection: Server.ServerConnection):
     recv_handler.server_connection = server_connection
     send_handler.server_connection = server_connection
     async for raw_message in server_connection:
-        logger.debug(f"{raw_message}..." if len(raw_message) > 80 else raw_message)
+        logger.debug(f"{raw_message[:80]}..." if len(raw_message) > 80 else raw_message)
         decoded_raw_message: dict = json.loads(raw_message)
         post_type = decoded_raw_message.get("post_type")
         if post_type == "meta_event":
