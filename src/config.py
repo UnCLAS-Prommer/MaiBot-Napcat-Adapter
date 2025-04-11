@@ -34,9 +34,7 @@ class Config:
                 try:
                     raw_config = tomli.load(f)
                 except tomli.TOMLDecodeError as e:
-                    logger.critical(
-                        f"配置文件bot_config.toml填写有误，请检查第{e.lineno}行第{e.colno}处：{e.msg}"
-                    )
+                    logger.critical(f"配置文件bot_config.toml填写有误，请检查第{e.lineno}行第{e.colno}处：{e.msg}")
                     sys.exit(1)
             for key in include_configs:
                 if key not in raw_config:

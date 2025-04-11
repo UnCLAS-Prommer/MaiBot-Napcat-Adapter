@@ -1,4 +1,4 @@
-class MetaEventType():
+class MetaEventType:
     lifecycle = "lifecycle"  # 生命周期
 
     class Lifecycle:
@@ -27,6 +27,7 @@ class MessageType:  # 接受消息大类
 class NoticeType:  # 通知事件
     friend_recall = "friend_recall"  # 私聊消息撤回
     group_recall = "group_recall"  # 群聊消息撤回
+    notify = "notify"
 
     class Notify:
         poke = "poke"  # 戳一戳
@@ -46,13 +47,17 @@ class RealMessageType:  # 实际消息分类
     share = "share"  # 链接分享（json形式）
     reply = "reply"  # 回复消息
     forward = "forward"  # 转发消息
-    node = "node" # 转发消息节点
+    node = "node"  # 转发消息节点
+
 
 class MessageSentType:
     private = "private"
+
     class Private:
         friend = "friend"
         group = "group"
+
     group = "group"
+
     class Group:
         normal = "normal"

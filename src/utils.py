@@ -21,9 +21,7 @@ class SSLAdapter(HTTPAdapter):
         ssl_context = ssl.create_default_context()
         ssl_context.set_ciphers("DEFAULT")
         ssl_context.check_hostname = False  # 避免在请求时 verify=False 设置时报错， 如果设置需要校验证书可去掉该行。
-        ssl_context.minimum_version = (
-            ssl.TLSVersion.TLSv1_2
-        )  # 最小版本设置成1.2 可去掉低版本的警告
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2  # 最小版本设置成1.2 可去掉低版本的警告
         ssl_context.maximum_version = ssl.TLSVersion.TLSv1_2  # 最大版本设置成1.2
         kwargs["ssl_context"] = ssl_context
         return super().init_poolmanager(*args, **kwargs)
@@ -42,9 +40,7 @@ async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> d
     return socket_response.get("data")
 
 
-async def get_member_info(
-    websocket: Server.ServerConnection, group_id: int, user_id: int
-) -> dict:
+async def get_member_info(websocket: Server.ServerConnection, group_id: int, user_id: int) -> dict:
     """
     获取群成员信息
 
@@ -89,9 +85,13 @@ def convert_image_to_gif(image_base64: str) -> str:
         return image_base64
 
 
-async def get_self_info(websocket: Server.ServerConnection) -> str:
+async def get_self_info(websocket: Server.ServerConnection) -> dict:
     """
     获取自身信息
+    Parameters:
+        websocket: WebSocket连接对象
+    Returns:
+        data: dict: 返回的自身信息
     """
     payload = json.dumps({"action": "get_login_info", "params": {}})
     await websocket.send(payload)
@@ -101,5 +101,28 @@ async def get_self_info(websocket: Server.ServerConnection) -> str:
 
 
 def get_image_format(raw_data: str) -> str:
+    """
+    从Base64编码的数据中确定图片的格式。
+    Parameters:
+        raw_data: str: Base64编码的图片数据。
+    Returns:
+        format: str: 图片的格式（例如 'jpeg', 'png', 'gif'）。
+    """
     image_bytes = base64.b64decode(raw_data)
     return Image.open(io.BytesIO(image_bytes)).format.lower()
+
+
+async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) -> dict:
+    """
+    获取陌生人信息
+    Parameters:
+        websocket: WebSocket连接对象
+        user_id: 用户ID
+    Returns:
+        dict: 返回的陌生人信息
+    """
+    payload = json.dumps({"action": "get_stranger_info", "params": {"user_id": user_id}})
+    await websocket.send(payload)
+    response: dict = await get_response()
+    logger.debug(response)
+    return response.get("data")

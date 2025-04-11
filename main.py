@@ -22,7 +22,7 @@ async def message_recv(server_connection: Server.ServerConnection):
         elif post_type == "message":
             await message_queue.put(decoded_raw_message)
         elif post_type == "notice":
-            pass
+            await message_queue.put(decoded_raw_message)
         elif post_type is None:
             await recv_queue.put(decoded_raw_message)
 
@@ -36,7 +36,7 @@ async def message_process():
         elif post_type == "meta_event":
             await recv_handler.handle_meta_event(message)
         elif post_type == "notice":
-            await recv_handler.handle_notify(message)
+            await recv_handler.handle_notice(message)
         else:
             logger.warning(f"未知的post_type: {post_type}")
         message_queue.task_done()
@@ -50,12 +50,8 @@ async def main():
 
 async def napcat_server():
     logger.info("正在启动adapter...")
-    async with Server.serve(
-        message_recv, global_config.server_host, global_config.server_port
-    ) as server:
-        logger.info(
-            f"Adapter已启动，监听地址: ws://{global_config.server_host}:{global_config.server_port}"
-        )
+    async with Server.serve(message_recv, global_config.server_host, global_config.server_port) as server:
+        logger.info(f"Adapter已启动，监听地址: ws://{global_config.server_host}:{global_config.server_port}")
         await server.serve_forever()
 
 

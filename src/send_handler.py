@@ -74,7 +74,7 @@ class SendHandler:
     async def handle_seg_recursive(self, seg_data: Seg) -> list:
         payload: list = []
         if seg_data.type == "seglist":
-            level = self.get_level(seg_data)  # 给以后可能的多层嵌套做准备，此处不使用
+            # level = self.get_level(seg_data)  # 给以后可能的多层嵌套做准备，此处不使用
             for seg in seg_data.data:
                 payload = self.process_message_by_type(seg, payload)
         else:
@@ -85,6 +85,8 @@ class SendHandler:
         new_payload = payload
         if seg.type == "reply":
             target_id = seg.data
+            if target_id == "notice":
+                return []
             new_payload = self.build_payload(
                 payload, self.handle_reply_message(target_id), True
             )

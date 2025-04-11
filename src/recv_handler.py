@@ -18,7 +18,13 @@ from maim_message import (
     Router,
 )
 
-from .utils import get_group_info, get_member_info, get_image_base64, get_self_info
+from .utils import (
+    get_group_info,
+    get_member_info,
+    get_image_base64,
+    get_self_info,
+    get_stranger_info,
+)
 from .message_queue import get_response
 
 
@@ -65,7 +71,8 @@ class RecvHandler:
         """
         message_type: str = raw_message.get("message_type")
         message_id: int = raw_message.get("message_id")
-        message_time: int = raw_message.get("time")
+        # message_time: int = raw_message.get("time")
+        message_time: float = time.time()  # 应可乐要求，现在是float了
 
         template_info: TemplateInfo = None  # 模板信息，暂时为空，等待启用
         format_info: FormatInfo = None  # 格式化信息，暂时为空，等待启用
@@ -114,9 +121,7 @@ class RecvHandler:
                 # -------------------这里需要群信息吗？-------------------
 
                 # 获取群聊相关信息，在此单独处理group_name，因为默认发送的消息中没有
-                fetched_group_info: dict = await get_group_info(
-                    self.server_connection, raw_message.get("group_id")
-                )
+                fetched_group_info: dict = await get_group_info(self.server_connection, raw_message.get("group_id"))
                 group_name = ""
                 if fetched_group_info.get("group_name"):
                     group_name = fetched_group_info.get("group_name")
@@ -144,9 +149,7 @@ class RecvHandler:
                 )
 
                 # 获取群聊相关信息，在此单独处理group_name，因为默认发送的消息中没有
-                fetched_group_info = await get_group_info(
-                    self.server_connection, raw_message.get("group_id")
-                )
+                fetched_group_info = await get_group_info(self.server_connection, raw_message.get("group_id"))
                 group_name: str = None
                 if fetched_group_info:
                     group_name = fetched_group_info.get("group_name")
@@ -319,9 +322,7 @@ class RecvHandler:
             seg_data = Seg(type="emoji", data=image_base64)
             return seg_data
 
-    async def handle_at_message(
-        self, raw_message: dict, self_id: int, group_id: int
-    ) -> Seg:
+    async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> Seg:
         """
         处理at消息
         Parameters:
@@ -337,15 +338,11 @@ class RecvHandler:
             if str(self_id) == str(qq_id):
                 self_info: dict = await get_self_info(self.server_connection)
                 if self_info:
-                    return Seg(
-                        type=RealMessageType.text, data=f"@{self_info.get('nickname')}"
-                    )
+                    return Seg(type=RealMessageType.text, data=f"@{self_info.get('nickname')}")
                 else:
                     return None
             else:
-                member_info: dict = await get_member_info(
-                    self.server_connection, group_id=group_id, user_id=self_id
-                )
+                member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=self_id)
                 if member_info:
                     return Seg(
                         type=RealMessageType.text,
@@ -354,24 +351,130 @@ class RecvHandler:
                 else:
                     return None
 
-    async def handle_notify(self, raw_message: dict) -> None:
+    async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")
+        # message_time: int = raw_message.get("time")
+        message_time: float = time.time()  # 应可乐要求，现在是float了
+
+        group_id = raw_message.get("group_id")
+        user_id = raw_message.get("user_id")
+        handled_message: Seg = None
+
         match notice_type:
             case NoticeType.friend_recall:
-                logger.info("用户撤回一条消息")
+                logger.info("好友撤回一条消息")
+                logger.info(f"撤回消息ID：{raw_message.get('message_id')}, 撤回时间：{raw_message.get('time')}")
+                logger.warning("暂时不支持撤回消息处理")
                 pass
             case NoticeType.group_recall:
                 logger.info("群内用户撤回一条消息")
+                logger.info(f"撤回消息ID：{raw_message.get('message_id')}, 撤回时间：{raw_message.get('time')}")
+                logger.warning("暂时不支持撤回消息处理")
                 pass
-            case NoticeType.Notify:
+            case NoticeType.notify:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
                     case NoticeType.Notify.poke:
-                        logger.info("用户戳了一戳")
-                        pass
-        
-    async def handle_poke_notify(self) -> None:
-        pass
+                        handled_message: Seg = await self.handle_poke_notify(raw_message)
+        if not handled_message:
+            logger.warning("notice处理失败或不支持")
+            return None
+
+        source_name: str = None
+        source_cardname: str = None
+        if group_id:
+            member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
+            if member_info:
+                source_name = member_info.get("nickname")
+                source_cardname = member_info.get("card")
+            else:
+                logger.warning("无法获取戳一戳消息发送者的昵称，消息可能会无效")
+                source_name = "QQ用户"
+        else:
+            stranger_info = await get_stranger_info(self.server_connection, user_id)
+            if stranger_info:
+                source_name = stranger_info.get("nickname")
+            else:
+                logger.warning("无法获取戳一戳消息发送者的昵称，消息可能会无效")
+                source_name = "QQ用户"
+
+        user_info: UserInfo = UserInfo(
+            platform=global_config.platform,
+            user_id=user_id,
+            user_nickname=source_name,
+            user_cardname=source_cardname,
+        )
+
+        group_info: GroupInfo = None
+        if group_id:
+            fetched_group_info = await get_group_info(self.server_connection, group_id)
+            group_name: str = None
+            if fetched_group_info:
+                group_name = fetched_group_info.get("group_name")
+            group_info = GroupInfo(
+                platform=global_config.platform,
+                group_id=group_id,
+                group_name=group_name,
+            )
+
+        message_info: BaseMessageInfo = BaseMessageInfo(
+            platform=global_config.platform,
+            message_id="notice",
+            time=message_time,
+            user_info=user_info,
+            group_info=group_info,
+            template_info=None,
+            format_info=None,
+        )
+
+        message_base: MessageBase = MessageBase(
+            message_info=message_info,
+            message_segment=handled_message,
+            raw_message=json.dumps(raw_message),
+        )
+
+        logger.info("发送到Maibot处理通知信息")
+        await self.message_process(message_base)
+
+    async def handle_poke_notify(self, raw_message: dict) -> Seg:
+        self_info: dict = await get_self_info(self.server_connection)
+        if not self_info:
+            logger.error("自身信息获取失败")
+            return None
+        self_id = raw_message.get("self_id")
+        target_id = raw_message.get("target_id")
+        target_name: str = None
+        raw_info: list = raw_message.get("raw_info")
+        # 计算Seg
+        if self_id == target_id:
+            if self_info:
+                target_name = self_info.get("nickname")
+            else:
+                logger.warning("无法获取bot的昵称，戳一戳消息可能无效")
+                target_name = "你"
+        try:
+            first_txt = raw_info[2].get("text", "戳了戳")
+            second_txt = raw_info[4].get("text", "")
+        except Exception as e:
+            logger.warning(f"解析戳一戳消息失败，使用默认文本：{str(e)}")
+            first_txt = "戳了戳"
+            second_txt = ""
+        """
+        # 不启用戳其他人的处理
+        else:
+            # 由于Napcat不支持获取昵称，所以需要单独获取
+            group_id = raw_message.get("group_id")
+            fetched_member_info: dict = await get_member_info(
+                self.server_connection, group_id, target_id
+            )
+            if fetched_member_info:
+                target_name = fetched_member_info.get("nickname")
+        """
+        seg_data: Seg = Seg(
+            type="text",
+            data=f"{first_txt}{target_name}{second_txt}（这是一个类似摸摸头的友善行为，不是恶意行为，请不要作出攻击发言）",
+        )
+        return seg_data
 
     async def handle_forward_message(self, message_list: list) -> Seg:
         """
@@ -379,24 +482,18 @@ class RecvHandler:
         Parameters:
             message_list: list: 转发消息列表
         """
-        handled_message, image_count = await self._handle_forward_message(
-            message_list, 0
-        )
+        handled_message, image_count = await self._handle_forward_message(message_list, 0)
         handled_message: Seg
         image_count: int
         if not handled_message:
             return None
         if image_count < 5 and image_count > 0:
             # 处理图片数量小于5的情况，此时解析图片为base64
-            parsed_handled_message = await self._recursive_parse_image_seg(
-                handled_message, True
-            )
+            parsed_handled_message = await self._recursive_parse_image_seg(handled_message, True)
             return parsed_handled_message
         elif image_count > 0:
             # 处理图片数量大于等于5的情况，此时解析图片为占位符
-            parsed_handled_message = await self._recursive_parse_image_seg(
-                handled_message, False
-            )
+            parsed_handled_message = await self._recursive_parse_image_seg(handled_message, False)
             return parsed_handled_message
         else:
             # 处理没有图片的情况，此时直接返回
@@ -436,9 +533,7 @@ class RecvHandler:
             else:
                 return seg_data
 
-    async def _handle_forward_message(
-        self, message_list: list, layer: int
-    ) -> Tuple[Seg, int]:
+    async def _handle_forward_message(self, message_list: list, layer: int) -> Tuple[Seg, int]:
         """
         递归处理实际转发消息
         Parameters:
@@ -470,14 +565,11 @@ class RecvHandler:
                     )
                 else:
                     contents = message_of_sub_message.get("data").get("content")
-                    seg_data, count = await self._handle_forward_message(
-                        contents, layer + 1
-                    )
+                    seg_data, count = await self._handle_forward_message(contents, layer + 1)
                     image_count += count
                     head_tip = Seg(
                         type="text",
-                        data=("--" * layer)
-                        + f"【{user_nickname}】: 合并转发消息内容：\n",
+                        data=("--" * layer) + f"【{user_nickname}】: 合并转发消息内容：\n",
                     )
                     full_seg_data = Seg(type="seglist", data=[head_tip, seg_data])
                 seg_list.append(full_seg_data)
@@ -489,9 +581,7 @@ class RecvHandler:
                         Seg(
                             type="seglist",
                             data=[
-                                Seg(
-                                    type="text", data=("--" * layer) + user_nickname_str
-                                ),
+                                Seg(type="text", data=("--" * layer) + user_nickname_str),
                                 seg_data,
                                 break_seg,
                             ],
