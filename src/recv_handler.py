@@ -217,13 +217,18 @@ class RecvHandler:
             match sub_message_type:
                 case RealMessageType.text:
                     ret_seg = await self.handle_text_message(sub_message)
-                    seg_message.append(ret_seg)
+                    if ret_seg:
+                        seg_message.append(ret_seg)
+                    else:
+                        logger.warning("text处理失败")
                 case RealMessageType.face:
                     pass
                 case RealMessageType.image:
                     ret_seg = await self.handle_image_message(sub_message)
                     if ret_seg:
                         seg_message.append(ret_seg)
+                    else:
+                        logger.warning("image处理失败")
                 case RealMessageType.record:
                     logger.warning("不支持语音解析")
                     pass
@@ -238,6 +243,8 @@ class RecvHandler:
                     )
                     if ret_seg:
                         seg_message.append(ret_seg)
+                    else:
+                        logger.warning("at处理失败")
                 case RealMessageType.rps:
                     logger.warning("暂时不支持猜拳魔法表情解析")
                     pass
@@ -274,6 +281,8 @@ class RecvHandler:
                     ret_seg = await self.handle_forward_message(messages)
                     if ret_seg:
                         seg_message.append(ret_seg)
+                    else:
+                        logger.warning("转发消息处理失败")
                 case RealMessageType.node:
                     logger.warning("不支持转发消息节点解析")
                     pass
@@ -309,9 +318,11 @@ class RecvHandler:
             seg_data: Seg: 处理后的消息段
         """
         message_data: dict = raw_message.get("data")
-        image_base64 = await get_image_base64(message_data.get("url"))
         image_sub_type = message_data.get("sub_type")
-        if not image_base64:
+        try:
+            image_base64 = await get_image_base64(message_data.get("url"))
+        except Exception as e:
+            logger.error(f"图片消息处理失败: {str(e)}")
             return None
         if image_sub_type == 0:
             """这部分认为是图片"""
@@ -509,11 +520,19 @@ class RecvHandler:
                 return Seg(type="seglist", data=new_seg_list)
             elif seg_data.type == "image":
                 image_url = seg_data.data
-                encoded_image = await get_image_base64(image_url)
+                try:
+                    encoded_image = await get_image_base64(image_url)
+                except Exception as e:
+                    logger.error(f"图片处理失败: {str(e)}")
+                    return Seg(type="text", data="[图片]")
                 return Seg(type="image", data=encoded_image)
             elif seg_data.type == "emoji":
                 image_url = seg_data.data
-                encoded_image = await get_image_base64(image_url)
+                try:
+                    encoded_image = await get_image_base64(image_url)
+                except Exception as e:
+                    logger.error(f"图片处理失败: {str(e)}")
+                    return Seg(type="text", data="[表情包]")
                 return Seg(type="emoji", data=encoded_image)
             else:
                 return seg_data
