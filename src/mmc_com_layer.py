@@ -5,7 +5,7 @@ from .send_handler import send_handler
 
 route_config = RouteConfig(
     route_config={
-        "qq": TargetConfig(
+        global_config.platform: TargetConfig(
             url=f"ws://{global_config.mai_host}:{global_config.mai_port}/ws",
             token=None,
         )

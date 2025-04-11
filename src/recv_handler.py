@@ -24,6 +24,7 @@ from .utils import (
     get_image_base64,
     get_self_info,
     get_stranger_info,
+    get_message_detail,
 )
 from .message_queue import get_response
 
@@ -256,11 +257,14 @@ class RecvHandler:
                     logger.warning("暂时不支持窗口抖动解析")
                     pass
                 case RealMessageType.share:
-                    logger.warning("链接分享？啊？你搞我啊？")
+                    logger.warning("暂时不支持链接解析")
                     pass
                 case RealMessageType.reply:
-                    logger.warning("暂时不支持回复解析")
-                    pass
+                    ret_seg = await self.handle_reply_message(sub_message)
+                    if ret_seg:
+                        seg_message.append(ret_seg)
+                    else:
+                        logger.warning("reply处理失败")
                 case RealMessageType.forward:
                     forward_message_id = sub_message.get("data").get("id")
                     payload = json.dumps(
@@ -361,6 +365,22 @@ class RecvHandler:
                     )
                 else:
                     return None
+
+    async def handle_reply_message(self, raw_message: dict) -> None:
+        """
+        处理回复消息
+
+        """
+        message_id = raw_message.get("data").get("id")
+        message_detail: dict = await get_message_detail(self.server_connection, message_id)
+        sender_info: dict = message_detail.get("sender")
+        sender_nickname: str = sender_info.get("nickname")
+        if not sender_nickname:
+            logger.warning("无法获取被引用的人的昵称，返回默认值")
+            return Seg(type="text", data="回复QQ用户的消息，说：")
+        else:
+            return Seg(type="text", data=f"回复{sender_nickname}的消息，说：")
+            
 
     async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")

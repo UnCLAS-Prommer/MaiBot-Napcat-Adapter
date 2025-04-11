@@ -126,3 +126,18 @@ async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) ->
     response: dict = await get_response()
     logger.debug(response)
     return response.get("data")
+
+async def get_message_detail(websocket: Server.ServerConnection, message_id: str) -> dict:
+    """
+    获取消息详情
+    Parameters:
+        websocket: WebSocket连接对象
+        message_id: 消息ID
+    Returns:
+        dict: 返回的消息详情
+    """
+    payload = json.dumps({"action": "get_msg", "params": {"message_id": message_id}})
+    await websocket.send(payload)
+    response: dict = await get_response()
+    logger.debug(response)
+    return response.get("data")
