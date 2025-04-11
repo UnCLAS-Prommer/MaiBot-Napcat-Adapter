@@ -10,13 +10,14 @@
 [Nickname] # 现在没用
 nickname = ""
 
-[Napcat_Server] # Napvat连接的ws服务设置
+[Napcat_Server] # Napcat连接的ws服务设置
 host = "localhost" # Napcat设定的url地址
 port = 8095        # Napcat设定的ws端口
 
 [MaiBot_Server] # 连接麦麦的ws服务设置
-host = "localhost" # 麦麦在.env文件中设置的url地址
-port = 8000        # 麦麦在.env文件中设置的ws端口
+platform_name = "qq" # 标识adapter的名称（必填）
+host = "localhost"   # 麦麦在.env文件中设置的url地址
+port = 8000          # 麦麦在.env文件中设置的ws端口
 
 [Napcat]
 heartbeat = 30 # 与Napcat设置的心跳相同（按秒计）
@@ -25,6 +26,9 @@ heartbeat = 30 # 与Napcat设置的心跳相同（按秒计）
 group_list = []
 private_list = []
 enable_temp = false
+
+[Debug]
+level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR）
 ```
 
 你需要的就是把template_config.toml复制到根目录，然后改
@@ -83,11 +87,11 @@ sequenceDiagram
   - [x] 文本与消息混合解析
   - [x] 转发解析（含图片动态解析）
   - [ ] 群公告解析
-  - [ ] 回复解析（？）
+  - [x] 回复解析
   - [ ] 群临时消息（可能不做）
   - [ ] 链接解析
   - [x] 戳一戳解析
-    - [ ] 读取戳一戳的自定义内容（？）
+    - [x] 读取戳一戳的自定义内容
   - [ ] 语音解析（？）
   - [ ] 所有的notice类
     - [ ] <del>撤回</del>
