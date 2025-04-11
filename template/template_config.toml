@@ -6,8 +6,9 @@ host = "localhost" # Napcat设定的url地址
 port = 8095        # Napcat设定的ws端口
 
 [MaiBot_Server] # 连接麦麦的ws服务设置
-host = "localhost" # 麦麦在.env文件中设置的url地址
-port = 8000        # 麦麦在.env文件中设置的ws端口
+platform_name = "qq" # 标识adapter的名称（必填）
+host = "localhost"   # 麦麦在.env文件中设置的url地址
+port = 8000          # 麦麦在.env文件中设置的ws端口
 
 [Napcat]
 heartbeat = 30 # 与Napcat设置的心跳相同（按秒计）

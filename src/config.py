@@ -43,6 +43,10 @@ class Config:
             self.nickname = raw_config["Nickname"].get("nickname")
             self.server_host = raw_config["Napcat_Server"].get("host", "localhost")
             self.server_port = raw_config["Napcat_Server"].get("port", 8095)
+            self.platform = raw_config["MaiBot_Server"].get("platform_name")
+            if not self.platform:
+                logger.critical("请在配置文件中指定平台")
+                sys.exit(1)
             self.napcat_heartbeat_interval = raw_config["Napcat"].get("interval", 30)
             self.mai_host = raw_config["MaiBot_Server"].get("host", "localhost")
             self.mai_port = raw_config["MaiBot_Server"].get("port", 8000)
