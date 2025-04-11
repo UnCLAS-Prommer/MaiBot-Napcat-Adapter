@@ -31,6 +31,7 @@ class SendHandler:
         action: str = None
         id_name: str = None
 
+        logger.info("接收到来自MaiBot的消息，处理中")
         try:
             processed_message: list = await self.handle_seg_recursive(message_segment)
         except Exception as e:
@@ -49,7 +50,7 @@ class SendHandler:
             else:
                 logger.error("无法识别的消息类型")
                 return
-
+            logger.info("尝试发送到napcat")
             response = await self.send_message_to_napcat(
                 action,
                 {
@@ -87,26 +88,18 @@ class SendHandler:
             target_id = seg.data
             if target_id == "notice":
                 return []
-            new_payload = self.build_payload(
-                payload, self.handle_reply_message(target_id), True
-            )
+            new_payload = self.build_payload(payload, self.handle_reply_message(target_id), True)
         elif seg.type == "text":
             text = seg.data
-            new_payload = self.build_payload(
-                payload, self.handle_text_message(text), False
-            )
+            new_payload = self.build_payload(payload, self.handle_text_message(text), False)
         elif seg.type == "face":
             pass
         elif seg.type == "image":
             image = seg.data
-            new_payload = self.build_payload(
-                payload, self.handle_image_message(image), False
-            )
+            new_payload = self.build_payload(payload, self.handle_image_message(image), False)
         elif seg.type == "emoji":
             emoji = seg.data
-            new_payload = self.build_payload(
-                payload, self.handle_emoji_message(emoji), False
-            )
+            new_payload = self.build_payload(payload, self.handle_emoji_message(emoji), False)
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
@@ -151,19 +144,6 @@ class SendHandler:
                 "summary": "[动画表情]",
             },
         }
-
-    async def test_send(self):
-        response: dict = await self.send_message_to_napcat(
-            "send_group_msg",
-            {
-                "group_id": 1038831234,
-                "message": [{"type": "text", "data": {"text": "test"}}],
-            },
-        )
-        if response.get("status") == "ok":
-            logger.info("消息test发送成功")
-        else:
-            logger.warning(f"消息发送失败，napcat返回：{str(response)}")
 
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:
         payload = json.dumps({"action": action, "params": params})

@@ -28,6 +28,7 @@ class Config:
             "Napcat_Server",
             "MaiBot_Server",
             "Napcat",
+            "Debug"
         ]
         if os.path.exists(self.config_path):
             with open(self.config_path, "rb") as f:
@@ -50,6 +51,7 @@ class Config:
             self.napcat_heartbeat_interval = raw_config["Napcat"].get("interval", 30)
             self.mai_host = raw_config["MaiBot_Server"].get("host", "localhost")
             self.mai_port = raw_config["MaiBot_Server"].get("port", 8000)
+            self.debug_level = raw_config["Debug"].get("debug_level", "INFO")
         else:
             logger.error("配置文件不存在！")
             logger.info("正在创建配置文件...")

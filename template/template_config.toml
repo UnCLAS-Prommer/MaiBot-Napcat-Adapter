@@ -1,7 +1,7 @@
 [Nickname] # 现在没用
 nickname = ""
 
-[Napcat_Server] # Napvat连接的ws服务设置
+[Napcat_Server] # Napcat连接的ws服务设置
 host = "localhost" # Napcat设定的url地址
 port = 8095        # Napcat设定的ws端口
 
@@ -17,3 +17,6 @@ heartbeat = 30 # 与Napcat设置的心跳相同（按秒计）
 group_list = []
 private_list = []
 enable_temp = false
+
+[Debug]
+level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR）
