@@ -357,7 +357,7 @@ class RecvHandler:
                 else:
                     return None
             else:
-                member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=self_id)
+                member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=qq_id)
                 if member_info:
                     return Seg(
                         type=RealMessageType.text,
