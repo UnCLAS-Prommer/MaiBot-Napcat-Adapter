@@ -27,7 +27,6 @@ class Config:
             "Nickname",
             "Napcat_Server",
             "MaiBot_Server",
-            "Napcat",
             "Debug"
         ]
         if os.path.exists(self.config_path):
@@ -48,7 +47,7 @@ class Config:
             if not self.platform:
                 logger.critical("请在配置文件中指定平台")
                 sys.exit(1)
-            self.napcat_heartbeat_interval = raw_config["Napcat"].get("interval", 30)
+            self.napcat_heartbeat_interval = raw_config["Napcat_Server"].get("heartbeat", 30)
             self.mai_host = raw_config["MaiBot_Server"].get("host", "localhost")
             self.mai_port = raw_config["MaiBot_Server"].get("port", 8000)
             self.debug_level = raw_config["Debug"].get("debug_level", "INFO")
