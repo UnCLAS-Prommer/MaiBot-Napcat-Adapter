@@ -4,7 +4,7 @@ nickname = ""
 [Napcat_Server] # Napcat连接的ws服务设置
 host = "localhost" # Napcat设定的url地址
 port = 8095        # Napcat设定的ws端口
-heartbeat = 30 # 与Napcat设置的心跳相同（按秒计）
+heartbeat = 30     # 与Napcat设置的心跳相同（按秒计）
 
 [MaiBot_Server] # 连接麦麦的ws服务设置
 platform_name = "qq" # 标识adapter的名称（必填）
