@@ -667,7 +667,12 @@ class RecvHandler:
         return Seg(type="seglist", data=seg_list), image_count
 
     async def message_process(self, message_base: MessageBase) -> None:
-        await self.maibot_router.send_message(message_base)
+        try:
+            await self.maibot_router.send_message(message_base)
+        except Exception as e:
+            logger.error(f"发送消息失败: {str(e)}")
+            logger.error("请检查与MaiBot之间的连接")
+            return None
 
 
 recv_handler = RecvHandler()
