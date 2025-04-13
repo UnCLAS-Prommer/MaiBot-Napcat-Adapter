@@ -127,6 +127,7 @@ async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) ->
     logger.debug(response)
     return response.get("data")
 
+
 async def get_message_detail(websocket: Server.ServerConnection, message_id: str) -> dict:
     """
     获取消息详情

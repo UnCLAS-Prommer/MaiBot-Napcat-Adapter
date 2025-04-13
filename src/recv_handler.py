@@ -380,7 +380,6 @@ class RecvHandler:
             return Seg(type="text", data="回复QQ用户的消息，说：")
         else:
             return Seg(type="text", data=f"回复{sender_nickname}的消息，说：")
-            
 
     async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")
