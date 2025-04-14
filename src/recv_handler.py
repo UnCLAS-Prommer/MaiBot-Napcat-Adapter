@@ -140,6 +140,7 @@ class RecvHandler:
             sub_type = raw_message.get("sub_type")
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
+                
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
