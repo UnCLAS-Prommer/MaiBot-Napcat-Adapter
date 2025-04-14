@@ -352,7 +352,7 @@ class RecvHandler:
             if str(self_id) == str(qq_id):
                 self_info: dict = await get_self_info(self.server_connection)
                 if self_info:
-                    return Seg(type=RealMessageType.text, data=f"@{self_info.get('nickname')}")
+                    return Seg(type=RealMessageType.text, data=f"@{self_info.get('nickname')}（id:{self_info.get('user_id')}）")
                 else:
                     return None
             else:
@@ -360,7 +360,7 @@ class RecvHandler:
                 if member_info:
                     return Seg(
                         type=RealMessageType.text,
-                        data=f"@{member_info.get('nickname')}",
+                        data=f"@{member_info.get('nickname')}（id:{member_info.get('user_id')}）",
                     )
                 else:
                     return None
