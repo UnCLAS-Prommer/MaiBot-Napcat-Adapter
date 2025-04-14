@@ -373,15 +373,15 @@ class RecvHandler:
         """
         message_id = raw_message.get("data").get("id")
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
-        raw_message: str = message_detail.get("raw_message")
+        reply_message: str = message_detail.get("raw_message")
         sender_info: dict = message_detail.get("sender")
         sender_nickname: str = sender_info.get("nickname")
         sender_id: str = sender_info.get("user_id")
         if not sender_nickname:
             logger.warning("无法获取被引用的人的昵称，返回默认值")
-            return Seg(type="text", data=f"[回复 QQ用户(未知id)：{raw_message}]，说：")
+            return Seg(type="text", data=f"[回复 QQ用户(未知id)：{reply_message}]，说：")
         else:
-            return Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})：{raw_message}]，说：")
+            return Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})：{reply_message}]，说：")
 
     async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")
