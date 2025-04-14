@@ -21,8 +21,8 @@ class SendHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
 
-    async def handle_seg(self, raw_message_base_str: str) -> None:
-        raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_str)
+    async def handle_seg(self, raw_message_base_dict: dict) -> None:
+        raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_dict)
         message_info: BaseMessageInfo = raw_message_base.message_info
         message_segment: Seg = raw_message_base.message_segment
         group_info: GroupInfo = message_info.group_info
