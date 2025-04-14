@@ -3,8 +3,9 @@ from .config import global_config
 import time
 import asyncio
 import json
-import websockets.asyncio.server as Server
+import websockets as Server
 from typing import List, Tuple
+import uuid
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
 from maim_message import (
@@ -267,15 +268,24 @@ class RecvHandler:
                         logger.warning("reply处理失败")
                 case RealMessageType.forward:
                     forward_message_id = sub_message.get("data").get("id")
+                    request_uuid = str(uuid.uuid4())
                     payload = json.dumps(
                         {
                             "action": "get_forward_msg",
                             "params": {"message_id": forward_message_id},
+                            "echo": request_uuid,
                         }
                     )
                     await self.server_connection.send(payload)
                     # response = await self.server_connection.recv()
-                    response: dict = await get_response()
+                    try:
+                        response: dict = await get_response(request_uuid)
+                    except TimeoutError:
+                        logger.error("获取转发消息超时")
+                        return None
+                    except Exception as e:
+                        logger.error(f"获取转发消息失败: {str(e)}")
+                        return None
                     logger.debug(
                         f"转发消息原始格式：{json.dumps(response)[:80]}..."
                         if len(json.dumps(response)) > 80
@@ -289,6 +299,9 @@ class RecvHandler:
                         logger.warning("转发消息处理失败")
                 case RealMessageType.node:
                     logger.warning("不支持转发消息节点解析")
+                    pass
+                case _:
+                    logger.warning(f"未知消息类型：{sub_message_type}")
                     pass
         return seg_message
 
@@ -366,13 +379,16 @@ class RecvHandler:
                 else:
                     return None
 
-    async def handle_reply_message(self, raw_message: dict) -> None:
+    async def handle_reply_message(self, raw_message: dict) -> Seg:
         """
         处理回复消息
 
         """
         message_id = raw_message.get("data").get("id")
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
+        if not message_detail:
+            logger.warning("获取被引用的消息详情失败")
+            return None
         sender_info: dict = message_detail.get("sender")
         sender_nickname: str = sender_info.get("nickname")
         if not sender_nickname:
