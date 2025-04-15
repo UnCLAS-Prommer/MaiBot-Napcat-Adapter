@@ -386,7 +386,6 @@ class RecvHandler:
         """
         message_id = raw_message.get("data").get("id")
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
-        logger.warning(message_detail)
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
             return None
