@@ -1,6 +1,7 @@
 import websockets.asyncio.server as Server
 import json
 import base64
+import uuid
 from .logger import logger
 from .message_queue import get_response
 
@@ -33,9 +34,17 @@ async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> d
 
     返回值需要处理可能为空的情况
     """
-    payload = json.dumps({"action": "get_group_info", "params": {"group_id": group_id}})
+    request_uuid = str(uuid.uuid4())
+    payload = json.dumps({"action": "get_group_info", "params": {"group_id": group_id}, "echo": request_uuid})
     await websocket.send(payload)
-    socket_response: dict = await get_response()
+    try:
+        socket_response: dict = await get_response(request_uuid)
+    except TimeoutError:
+        logger.error(f"获取群信息超时，群号: {group_id}")
+        return None
+    except Exception as e:
+        logger.error(f"获取群信息失败: {e}")
+        return None
     logger.debug(socket_response)
     return socket_response.get("data")
 
@@ -46,14 +55,23 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
 
     返回值需要处理可能为空的情况
     """
+    request_uuid = str(uuid.uuid4())
     payload = json.dumps(
         {
             "action": "get_group_member_info",
             "params": {"group_id": group_id, "user_id": user_id, "no_cache": True},
+            "echo": request_uuid,
         }
     )
     await websocket.send(payload)
-    socket_response: dict = await get_response()
+    try:
+        socket_response: dict = await get_response(request_uuid)
+    except TimeoutError:
+        logger.error(f"获取成员信息超时，群号: {group_id}, 用户ID: {user_id}")
+        return None
+    except Exception as e:
+        logger.error(f"获取成员信息失败: {e}")
+        return None
     logger.debug(socket_response)
     return socket_response.get("data")
 
@@ -93,9 +111,17 @@ async def get_self_info(websocket: Server.ServerConnection) -> dict:
     Returns:
         data: dict: 返回的自身信息
     """
-    payload = json.dumps({"action": "get_login_info", "params": {}})
+    request_uuid = str(uuid.uuid4())
+    payload = json.dumps({"action": "get_login_info", "params": {}, "echo": request_uuid})
     await websocket.send(payload)
-    response: dict = await get_response()
+    try:
+        response: dict = await get_response(request_uuid)
+    except TimeoutError:
+        logger.error("获取自身信息超时")
+        return None
+    except Exception as e:
+        logger.error(f"获取自身信息失败: {e}")
+        return None
     logger.debug(response)
     return response.get("data")
 
@@ -121,24 +147,40 @@ async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) ->
     Returns:
         dict: 返回的陌生人信息
     """
-    payload = json.dumps({"action": "get_stranger_info", "params": {"user_id": user_id}})
+    request_uuid = str(uuid.uuid4())
+    payload = json.dumps({"action": "get_stranger_info", "params": {"user_id": user_id}, "echo": request_uuid})
     await websocket.send(payload)
-    response: dict = await get_response()
+    try:
+        response: dict = await get_response(request_uuid)
+    except TimeoutError:
+        logger.error(f"获取陌生人信息超时，用户ID: {user_id}")
+        return None
+    except Exception as e:
+        logger.error(f"获取陌生人信息失败: {e}")
+        return None
     logger.debug(response)
     return response.get("data")
 
 
 async def get_message_detail(websocket: Server.ServerConnection, message_id: str) -> dict:
     """
-    获取消息详情
+    获取消息详情，可能为空
     Parameters:
         websocket: WebSocket连接对象
         message_id: 消息ID
     Returns:
         dict: 返回的消息详情
     """
-    payload = json.dumps({"action": "get_msg", "params": {"message_id": message_id}})
+    request_uuid = str(uuid.uuid4())
+    payload = json.dumps({"action": "get_msg", "params": {"message_id": message_id}, "echo": request_uuid})
     await websocket.send(payload)
-    response: dict = await get_response()
+    try:
+        response: dict = await get_response(request_uuid)
+    except TimeoutError:
+        logger.error(f"获取消息详情超时，消息ID: {message_id}")
+        return None
+    except Exception as e:
+        logger.error(f"获取消息详情失败: {e}")
+        return None
     logger.debug(response)
     return response.get("data")

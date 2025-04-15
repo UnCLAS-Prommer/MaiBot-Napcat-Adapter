@@ -1,5 +1,6 @@
 import json
-import websockets.asyncio.server as Server
+import websockets as Server
+import uuid
 
 # from .config import global_config
 # 白名单机制不启用
@@ -146,9 +147,17 @@ class SendHandler:
         }
 
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:
-        payload = json.dumps({"action": action, "params": params})
+        request_uuid = str(uuid.uuid4())
+        payload = json.dumps({"action": action, "params": params, "echo": request_uuid})
         await self.server_connection.send(payload)
-        response = await get_response()
+        try:
+            response = await get_response(request_uuid)
+        except TimeoutError:
+            logger.error("发送消息超时，未收到响应")
+            return {"status": "error", "message": "timeout"}
+        except Exception as e:
+            logger.error(f"发送消息失败: {e}")
+            return {"status": "error", "message": str(e)}
         return response
 
 

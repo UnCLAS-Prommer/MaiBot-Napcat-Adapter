@@ -7,7 +7,7 @@ from src.recv_handler import recv_handler
 from src.send_handler import send_handler
 from src.config import global_config
 from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
-from src.message_queue import recv_queue, message_queue
+from src.message_queue import message_queue, put_response, check_timeout_response
 
 
 async def message_recv(server_connection: Server.ServerConnection):
@@ -24,7 +24,7 @@ async def message_recv(server_connection: Server.ServerConnection):
         elif post_type == "notice":
             await message_queue.put(decoded_raw_message)
         elif post_type is None:
-            await recv_queue.put(decoded_raw_message)
+            await put_response(decoded_raw_message)
 
 
 async def message_process():
@@ -45,7 +45,7 @@ async def message_process():
 
 async def main():
     recv_handler.maibot_router = router
-    _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process())
+    _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process(), check_timeout_response())
 
 
 async def napcat_server():
