@@ -141,7 +141,7 @@ class RecvHandler:
             sub_type = raw_message.get("sub_type")
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
-                
+
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
@@ -369,7 +369,9 @@ class RecvHandler:
             if str(self_id) == str(qq_id):
                 self_info: dict = await get_self_info(self.server_connection)
                 if self_info:
-                    return Seg(type=RealMessageType.text, data=f"@{self_info.get('nickname')}（id:{self_info.get('user_id')}）")
+                    return Seg(
+                        type=RealMessageType.text, data=f"@{self_info.get('nickname')}（id:{self_info.get('user_id')}）"
+                    )
                 else:
                     return None
             else:
