@@ -141,7 +141,7 @@ class RecvHandler:
             sub_type = raw_message.get("sub_type")
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
-
+                
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
@@ -201,7 +201,7 @@ class RecvHandler:
         logger.info("发送到Maibot处理信息")
         await self.message_process(message_base)
 
-    async def handle_real_message(self, raw_message: dict) -> List[Seg]:
+    async def handle_real_message(self, raw_message: dict, in_reply: bool = False) -> List[Seg]:
         """
         处理实际消息
         Parameters:
@@ -225,6 +225,15 @@ class RecvHandler:
                         logger.warning("text处理失败")
                 case RealMessageType.face:
                     pass
+                case RealMessageType.reply:
+                    if not in_reply:
+                        ret_seg = await self.handle_reply_message(sub_message)
+                        if ret_seg:
+                            seg_message += ret_seg
+                        else:
+                            logger.warning("reply处理失败")
+                    else:
+                        pass
                 case RealMessageType.image:
                     ret_seg = await self.handle_image_message(sub_message)
                     if ret_seg:
@@ -260,12 +269,6 @@ class RecvHandler:
                 case RealMessageType.share:
                     logger.warning("暂时不支持链接解析")
                     pass
-                case RealMessageType.reply:
-                    ret_seg = await self.handle_reply_message(sub_message)
-                    if ret_seg:
-                        seg_message.append(ret_seg)
-                    else:
-                        logger.warning("reply处理失败")
                 case RealMessageType.forward:
                     forward_message_id = sub_message.get("data").get("id")
                     request_uuid = str(uuid.uuid4())
@@ -366,7 +369,7 @@ class RecvHandler:
             if str(self_id) == str(qq_id):
                 self_info: dict = await get_self_info(self.server_connection)
                 if self_info:
-                    return Seg(type=RealMessageType.text, data=f"@{self_info.get('nickname')}")
+                    return Seg(type=RealMessageType.text, data=f"@{self_info.get('nickname')}（id:{self_info.get('user_id')}）")
                 else:
                     return None
             else:
@@ -374,7 +377,7 @@ class RecvHandler:
                 if member_info:
                     return Seg(
                         type=RealMessageType.text,
-                        data=f"@{member_info.get('nickname')}",
+                        data=f"@{member_info.get('nickname')}（id:{member_info.get('user_id')}）",
                     )
                 else:
                     return None
@@ -389,13 +392,22 @@ class RecvHandler:
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
             return None
+        reply_message = await self.handle_real_message(message_detail, in_reply=True)
         sender_info: dict = message_detail.get("sender")
         sender_nickname: str = sender_info.get("nickname")
+        sender_id: str = sender_info.get("user_id")
+        seg_message: List[Seg] = []
         if not sender_nickname:
             logger.warning("无法获取被引用的人的昵称，返回默认值")
-            return Seg(type="text", data="回复QQ用户的消息，说：")
+            seg_message.append(Seg(type="text", data=f"[回复 QQ用户(未知id)："))
+            seg_message += reply_message
+            seg_message.append(Seg(type="text", data=f"]，说："))
+            return seg_message
         else:
-            return Seg(type="text", data=f"回复{sender_nickname}的消息，说：")
+            seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
+            seg_message += reply_message
+            seg_message.append(Seg(type="text", data=f"]，说："))
+            return seg_message
 
     async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")
