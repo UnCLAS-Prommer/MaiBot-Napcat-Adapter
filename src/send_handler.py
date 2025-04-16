@@ -31,10 +31,10 @@ class SendHandler:
         target_id: int = None
         action: str = None
         id_name: str = None
-
+        processed_message: list = []
         logger.info("接收到来自MaiBot的消息，处理中")
         try:
-            processed_message: list = await self.handle_seg_recursive(message_segment)
+            processed_message = await self.handle_seg_recursive(message_segment)
         except Exception as e:
             logger.error(f"处理消息时发生错误: {e}")
             return
@@ -77,6 +77,8 @@ class SendHandler:
         payload: list = []
         if seg_data.type == "seglist":
             # level = self.get_level(seg_data)  # 给以后可能的多层嵌套做准备，此处不使用
+            if not seg_data.data:
+                return []
             for seg in seg_data.data:
                 payload = self.process_message_by_type(seg, payload)
         else:
@@ -92,6 +94,8 @@ class SendHandler:
             new_payload = self.build_payload(payload, self.handle_reply_message(target_id), True)
         elif seg.type == "text":
             text = seg.data
+            if not text:
+                return []
             new_payload = self.build_payload(payload, self.handle_text_message(text), False)
         elif seg.type == "face":
             pass

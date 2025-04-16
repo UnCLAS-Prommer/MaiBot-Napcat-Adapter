@@ -77,7 +77,10 @@ class RecvHandler:
         message_time: float = time.time()  # 应可乐要求，现在是float了
 
         template_info: TemplateInfo = None  # 模板信息，暂时为空，等待启用
-        format_info: FormatInfo = None  # 格式化信息，暂时为空，等待启用
+        format_info: FormatInfo = FormatInfo(
+            content_format=["text", "image", "emoji"],
+            accept_format=["text", "image", "emoji", "reply"],
+        )  # 格式化信息，暂时为空，等待启用
         if message_type == MessageType.private:
             sub_type = raw_message.get("sub_type")
             if sub_type == MessageType.Private.friend:
@@ -436,6 +439,8 @@ class RecvHandler:
                 match sub_type:
                     case NoticeType.Notify.poke:
                         handled_message: Seg = await self.handle_poke_notify(raw_message)
+                    case _:
+                        logger.warning("不支持的notify类型")
         if not handled_message:
             logger.warning("notice处理失败或不支持")
             return None
