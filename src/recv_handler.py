@@ -80,7 +80,7 @@ class RecvHandler:
         format_info: FormatInfo = FormatInfo(
             content_format=["text", "image", "emoji"],
             accept_format=["text", "image", "emoji", "reply"],
-        )  # 格式化信息，暂时为空，等待启用
+        )  # 格式化信息
         if message_type == MessageType.private:
             sub_type = raw_message.get("sub_type")
             if sub_type == MessageType.Private.friend:
@@ -213,7 +213,7 @@ class RecvHandler:
             seg_message: list[Seg]: 处理后的消息段列表
         """
         real_message: list = raw_message.get("message")
-        if len(real_message) == 0:
+        if not real_message:
             return None
         seg_message: List[Seg] = []
         for sub_message in real_message:
@@ -232,7 +232,7 @@ class RecvHandler:
                     if not in_reply:
                         ret_seg = await self.handle_reply_message(sub_message)
                         if ret_seg:
-                            seg_message += ret_seg
+                            seg_message.append(ret_seg)
                         else:
                             logger.warning("reply处理失败")
                     else:
@@ -298,6 +298,9 @@ class RecvHandler:
                         else json.dumps(response)
                     )
                     messages = response.get("data").get("messages")
+                    if not messages:
+                        logger.warning("转发消息内容为空或获取失败")
+                        return None
                     ret_seg = await self.handle_forward_message(messages)
                     if ret_seg:
                         seg_message.append(ret_seg)
@@ -392,7 +395,11 @@ class RecvHandler:
         处理回复消息
 
         """
-        message_id = raw_message.get("data").get("id")
+        raw_message_data: dict = raw_message.get("data")
+        if raw_message_data:
+            message_id = raw_message_data.get("id")
+        else:
+            return None
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
@@ -419,8 +426,8 @@ class RecvHandler:
         # message_time: int = raw_message.get("time")
         message_time: float = time.time()  # 应可乐要求，现在是float了
 
-        group_id = raw_message.get("group_id")
-        user_id = raw_message.get("user_id")
+        group_id = str(raw_message.get("group_id"))
+        user_id = str(raw_message.get("user_id"))
         handled_message: Seg = None
 
         match notice_type:
@@ -441,6 +448,9 @@ class RecvHandler:
                         handled_message: Seg = await self.handle_poke_notify(raw_message)
                     case _:
                         logger.warning("不支持的notify类型")
+            case _:
+                logger.warning("不支持的notice类型")
+                return None
         if not handled_message:
             logger.warning("notice处理失败或不支持")
             return None
@@ -517,6 +527,8 @@ class RecvHandler:
             else:
                 logger.warning("无法获取bot的昵称，戳一戳消息可能无效")
                 target_name = "你"
+        else:
+            return None
         try:
             first_txt = raw_info[2].get("text", "戳了戳")
             second_txt = raw_info[4].get("text", "")

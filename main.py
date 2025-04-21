@@ -78,7 +78,7 @@ if __name__ == "__main__":
         logger.warning("收到中断信号，正在优雅关闭...")
         loop.run_until_complete(graceful_shutdown())
     except Exception as e:
-        logger.error(f"主程序异常: {str(e)}")
+        logger.exception(f"主程序异常: {str(e)}")
         if loop and not loop.is_closed():
             loop.run_until_complete(graceful_shutdown())
             loop.close()
