@@ -232,7 +232,7 @@ class RecvHandler:
                     if not in_reply:
                         ret_seg = await self.handle_reply_message(sub_message)
                         if ret_seg:
-                            seg_message.append(ret_seg)
+                            seg_message += ret_seg
                         else:
                             logger.warning("reply处理失败")
                     else:
