@@ -414,12 +414,12 @@ class RecvHandler:
         if not sender_nickname:
             logger.warning("无法获取被引用的人的昵称，返回默认值")
             seg_message.append(Seg(type="text", data=f"[回复 QQ用户(未知id)："))
-            seg_message.append += reply_message
+            seg_message += reply_message
             seg_message.append(Seg(type="text", data=f"]，说："))
             return seg_message
         else:
             seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
-            seg_message.append += reply_message
+            seg_message += reply_message
             seg_message.append(Seg(type="text", data=f"]，说："))
             return seg_message
 
