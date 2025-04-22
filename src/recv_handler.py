@@ -419,7 +419,7 @@ class RecvHandler:
             return seg_message
         else:
             seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
-            seg_message.append  += reply_message
+            seg_message.append += reply_message
             seg_message.append(Seg(type="text", data=f"]，说："))
             return seg_message
 
