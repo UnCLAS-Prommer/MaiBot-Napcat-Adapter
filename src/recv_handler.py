@@ -232,7 +232,7 @@ class RecvHandler:
                     if not in_reply:
                         ret_seg = await self.handle_reply_message(sub_message)
                         if ret_seg:
-                            seg_message.append(ret_seg)
+                            seg_message += ret_seg
                         else:
                             logger.warning("reply处理失败")
                     else:
@@ -405,6 +405,8 @@ class RecvHandler:
             logger.warning("获取被引用的消息详情失败")
             return None
         reply_message = await self.handle_real_message(message_detail, in_reply=True)
+        if reply_message == None:
+            reply_message = "(获取发言内容失败)"
         sender_info: dict = message_detail.get("sender")
         sender_nickname: str = sender_info.get("nickname")
         sender_id: str = sender_info.get("user_id")
