@@ -297,7 +297,11 @@ class RecvHandler:
                         if len(json.dumps(response)) > 80
                         else json.dumps(response)
                     )
-                    messages = response.get("data").get("messages")
+                    response_data: dict = response.get("data")
+                    if not response_data:
+                        logger.warning("转发消息内容为空或获取失败")
+                        return None
+                    messages = response_data.get("messages")
                     if not messages:
                         logger.warning("转发消息内容为空或获取失败")
                         return None
@@ -655,7 +659,10 @@ class RecvHandler:
                         0,
                     )
                 else:
-                    contents = message_of_sub_message.get("data").get("content")
+                    sub_message_data = message_of_sub_message.get("data")
+                    if not sub_message_data:
+                        continue
+                    contents = sub_message_data.get("content")
                     seg_data, count = await self._handle_forward_message(contents, layer + 1)
                     image_count += count
                     head_tip = Seg(
@@ -665,7 +672,10 @@ class RecvHandler:
                     full_seg_data = Seg(type="seglist", data=[head_tip, seg_data])
                 seg_list.append(full_seg_data)
             elif message_of_sub_message.get("type") == RealMessageType.text:
-                text_message = message_of_sub_message.get("data").get("text")
+                sub_message_data = message_of_sub_message.get("data")
+                if not sub_message_data:
+                    continue
+                text_message = sub_message_data.get("text")
                 seg_data = Seg(type="text", data=text_message)
                 if layer > 0:
                     seg_list.append(
