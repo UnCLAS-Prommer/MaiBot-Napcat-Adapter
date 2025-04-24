@@ -297,6 +297,9 @@ class RecvHandler:
                         if len(json.dumps(response)) > 80
                         else json.dumps(response)
                     )
+                    if response.get("status") == "failed":
+                        logger.warning("转发消息获取失败")
+                        return None
                     messages = response.get("data").get("messages")
                     if not messages:
                         logger.warning("转发消息内容为空或获取失败")
