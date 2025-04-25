@@ -463,7 +463,7 @@ class RecvHandler:
 
         source_name: str = None
         source_cardname: str = None
-        if group_id:
+        if group_id != "None":
             member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
             if member_info:
                 source_name = member_info.get("nickname")
