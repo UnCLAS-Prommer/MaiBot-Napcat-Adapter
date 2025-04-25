@@ -463,7 +463,7 @@ class RecvHandler:
 
         source_name: str = None
         source_cardname: str = None
-        if group_id:
+        if group_id and group_id != "None":
             member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
             if member_info:
                 source_name = member_info.get("nickname")
@@ -487,7 +487,7 @@ class RecvHandler:
         )
 
         group_info: GroupInfo = None
-        if group_id:
+        if group_id and group_id != "None":
             fetched_group_info = await get_group_info(self.server_connection, group_id)
             group_name: str = None
             if fetched_group_info:
@@ -536,8 +536,8 @@ class RecvHandler:
         else:
             return None
         try:
-            first_txt = raw_info[2].get("text", "戳了戳")
-            second_txt = raw_info[4].get("text", "")
+            first_txt = raw_info[2].get("txt", "戳了戳")
+            second_txt = raw_info[4].get("txt", "")
         except Exception as e:
             logger.warning(f"解析戳一戳消息失败，使用默认文本：{str(e)}")
             first_txt = "戳了戳"
