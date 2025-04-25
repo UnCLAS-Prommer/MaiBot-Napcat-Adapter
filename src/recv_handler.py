@@ -487,7 +487,7 @@ class RecvHandler:
         )
 
         group_info: GroupInfo = None
-        if group_id:
+        if group_id and group_id != "None":
             fetched_group_info = await get_group_info(self.server_connection, group_id)
             group_name: str = None
             if fetched_group_info:
