@@ -133,7 +133,7 @@ class RecvHandler:
 
                 group_info: GroupInfo = GroupInfo(
                     platform=global_config.platform,
-                    group_id=raw_message.get("group_id"),
+                    group_id=str(raw_message.get("group_id")),
                     group_name=group_name,
                 )
 
@@ -161,7 +161,7 @@ class RecvHandler:
 
                 group_info: GroupInfo = GroupInfo(
                     platform=global_config.platform,
-                    group_id=raw_message.get("group_id"),
+                    group_id=str(raw_message.get("group_id")),
                     group_name=group_name,
                 )
 
@@ -432,8 +432,8 @@ class RecvHandler:
         # message_time: int = raw_message.get("time")
         message_time: float = time.time()  # 应可乐要求，现在是float了
 
-        group_id = str(raw_message.get("group_id"))
-        user_id = str(raw_message.get("user_id"))
+        group_id = raw_message.get("group_id")
+        user_id = raw_message.get("user_id")
         handled_message: Seg = None
 
         match notice_type:
@@ -463,7 +463,7 @@ class RecvHandler:
 
         source_name: str = None
         source_cardname: str = None
-        if group_id and group_id != "None":
+        if group_id:
             member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
             if member_info:
                 source_name = member_info.get("nickname")
@@ -487,14 +487,14 @@ class RecvHandler:
         )
 
         group_info: GroupInfo = None
-        if group_id and group_id != "None":
+        if group_id:
             fetched_group_info = await get_group_info(self.server_connection, group_id)
             group_name: str = None
             if fetched_group_info:
                 group_name = fetched_group_info.get("group_name")
             group_info = GroupInfo(
                 platform=global_config.platform,
-                group_id=group_id,
+                group_id=str(group_id),
                 group_name=group_name,
             )
 
