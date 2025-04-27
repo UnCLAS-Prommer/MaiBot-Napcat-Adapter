@@ -105,6 +105,9 @@ class SendHandler:
         elif seg.type == "emoji":
             emoji = seg.data
             new_payload = self.build_payload(payload, self.handle_emoji_message(emoji), False)
+        elif seg.type == "voice":
+            voice = seg.data
+            new_payload = self.build_payload(payload, self.handle_voice_message(voice), False)
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
@@ -132,7 +135,10 @@ class SendHandler:
         """处理图片消息"""
         return {
             "type": "image",
-            "data": {"file": f"base64://{encoded_image}", "subtype": 0},
+            "data": {
+                "file": f"base64://{encoded_image}",
+                "subtype": 0,
+            },
         }  # base64 编码的图片
 
     def handle_emoji_message(self, encoded_emoji: str) -> dict:
@@ -148,6 +154,15 @@ class SendHandler:
                 "subtype": 1,
                 "summary": "[动画表情]",
             },
+        }
+
+    def handle_voice_message(self, encoded_voice: str) -> dict:
+        """处理语音消息"""
+        if not encoded_voice:
+            return {}
+        return {
+            "type": "record",
+            "data": {"file": f"base64://{encoded_voice}"},
         }
 
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:

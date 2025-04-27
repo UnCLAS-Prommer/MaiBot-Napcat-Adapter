@@ -23,7 +23,7 @@ class Config:
         self.config_path = os.path.join(self.root_path, "config.toml")
 
     def load_config(self):
-        include_configs = ["Nickname", "Napcat_Server", "MaiBot_Server", "Debug"]
+        include_configs = ["Nickname", "Napcat_Server", "MaiBot_Server", "Debug", "Voice"]
         if os.path.exists(self.config_path):
             with open(self.config_path, "rb") as f:
                 try:
@@ -46,6 +46,7 @@ class Config:
             self.mai_host = raw_config["MaiBot_Server"].get("host", "localhost")
             self.mai_port = raw_config["MaiBot_Server"].get("port", 8000)
             self.debug_level = raw_config["Debug"].get("level", "INFO")
+            self.use_tts = raw_config["Voice"].get("use_tts", False)
         else:
             logger.error("配置文件不存在！")
             logger.info("正在创建配置文件...")

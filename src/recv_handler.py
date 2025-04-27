@@ -169,6 +169,10 @@ class RecvHandler:
                 logger.warning("群聊消息类型不支持")
                 return None
 
+        additional_config: dict = {}
+        if global_config.use_tts:
+            additional_config["allow_tts"] = True
+
         # 消息信息
         message_info: BaseMessageInfo = BaseMessageInfo(
             platform=global_config.platform,
@@ -178,6 +182,7 @@ class RecvHandler:
             group_info=group_info,
             template_info=template_info,
             format_info=format_info,
+            additional_config=additional_config,
         )
 
         # 处理实际信息
@@ -417,14 +422,14 @@ class RecvHandler:
         seg_message: List[Seg] = []
         if not sender_nickname:
             logger.warning("无法获取被引用的人的昵称，返回默认值")
-            seg_message.append(Seg(type="text", data=f"[回复 QQ用户(未知id)："))
+            seg_message.append(Seg(type="text", data="[回复 QQ用户(未知id)："))
             seg_message += reply_message
-            seg_message.append(Seg(type="text", data=f"]，说："))
+            seg_message.append(Seg(type="text", data="]，说："))
             return seg_message
         else:
             seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
             seg_message += reply_message
-            seg_message.append(Seg(type="text", data=f"]，说："))
+            seg_message.append(Seg(type="text", data="]，说："))
             return seg_message
 
     async def handle_notice(self, raw_message: dict) -> None:

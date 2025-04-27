@@ -16,5 +16,8 @@ group_list = []
 private_list = []
 enable_temp = false
 
+[Voice] # 发送语音设置
+use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
+
 [Debug]
 level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR）
