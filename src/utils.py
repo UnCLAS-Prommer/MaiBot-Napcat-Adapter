@@ -71,9 +71,11 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
 
 async def get_image_base64(url: str) -> str:
     """获取图片/表情包的Base64"""
+    http = SSLAdapter()
     try:
-        http = SSLAdapter()
         response = http.request('GET', url, timeout=10)
+        if response.status != 200:
+            raise Exception(f"HTTP Error: {response.status}")
         image_bytes = response.data
         return base64.b64encode(image_bytes).decode("utf-8")
     except Exception as e:
