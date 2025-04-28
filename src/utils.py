@@ -5,27 +5,20 @@ import uuid
 from .logger import logger
 from .message_queue import get_response
 
-import requests
+import urllib3
 import ssl
-from requests.adapters import HTTPAdapter
 
 from PIL import Image
 import io
 
 
-class SSLAdapter(HTTPAdapter):
-    def init_poolmanager(self, *args, **kwargs):
-        """
-        tls1.3 不再支持RSA KEY exchange，py3.10 增加TLS的默认安全设置。可能导致握手失败。
-        使用 `ssl_context.set_ciphers('DEFAULT')` DEFAULT 老的加密设置。
-        """
-        ssl_context = ssl.create_default_context()
-        ssl_context.set_ciphers("DEFAULT")
-        ssl_context.check_hostname = False  # 避免在请求时 verify=False 设置时报错， 如果设置需要校验证书可去掉该行。
-        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2  # 最小版本设置成1.2 可去掉低版本的警告
-        ssl_context.maximum_version = ssl.TLSVersion.TLSv1_2  # 最大版本设置成1.2
-        kwargs["ssl_context"] = ssl_context
-        return super().init_poolmanager(*args, **kwargs)
+class SSLAdapter(urllib3.PoolManager):
+    def __init__(self, *args, **kwargs):
+        context = ssl.create_default_context()
+        context.set_ciphers('DEFAULT@SECLEVEL=1')
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        kwargs['ssl_context'] = context
+        super().__init__(*args, **kwargs)
 
 
 async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> dict:
@@ -78,12 +71,12 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
 
 async def get_image_base64(url: str) -> str:
     """获取图片/表情包的Base64"""
+    http = SSLAdapter()
     try:
-        sess = requests.session()
-        sess.mount("https://", SSLAdapter())  # 将上面定义的SSLAdapter 应用起来
-        response = sess.get(url, timeout=10, verify=True)
-        response.raise_for_status()
-        image_bytes = response.content
+        response = http.request('GET', url, timeout=10)
+        if response.status != 200:
+            raise Exception(f"HTTP Error: {response.status}")
+        image_bytes = response.data
         return base64.b64encode(image_bytes).decode("utf-8")
     except Exception as e:
         logger.error(f"图片下载失败: {str(e)}")
