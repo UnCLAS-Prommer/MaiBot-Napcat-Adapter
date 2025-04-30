@@ -133,7 +133,7 @@ class RecvHandler:
 
                 group_info: GroupInfo = GroupInfo(
                     platform=global_config.platform,
-                    group_id=str(raw_message.get("group_id")),
+                    group_id=raw_message.get("group_id"),
                     group_name=group_name,
                 )
 
@@ -161,7 +161,7 @@ class RecvHandler:
 
                 group_info: GroupInfo = GroupInfo(
                     platform=global_config.platform,
-                    group_id=str(raw_message.get("group_id")),
+                    group_id=raw_message.get("group_id"),
                     group_name=group_name,
                 )
 
@@ -499,7 +499,7 @@ class RecvHandler:
                 group_name = fetched_group_info.get("group_name")
             group_info = GroupInfo(
                 platform=global_config.platform,
-                group_id=str(group_id),
+                group_id=group_id,
                 group_name=group_name,
             )
 
