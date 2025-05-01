@@ -1,4 +1,4 @@
-import websockets.asyncio.server as Server
+import websockets as Server
 import json
 import base64
 import uuid

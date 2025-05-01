@@ -1,5 +1,6 @@
 from .logger import logger
 from .config import global_config
+from .qq_emoji_list import qq_face
 import time
 import asyncio
 import json
@@ -209,7 +210,7 @@ class RecvHandler:
         logger.info("发送到Maibot处理信息")
         await self.message_process(message_base)
 
-    async def handle_real_message(self, raw_message: dict, in_reply: bool = False) -> List[Seg]:
+    async def handle_real_message(self, raw_message: dict, in_reply: bool = False) -> List[Seg] | None:
         """
         处理实际消息
         Parameters:
@@ -232,7 +233,11 @@ class RecvHandler:
                     else:
                         logger.warning("text处理失败")
                 case RealMessageType.face:
-                    pass
+                    ret_seg = await self.handle_face_message(sub_message)
+                    if ret_seg:
+                        seg_message.append(ret_seg)
+                    else:
+                        logger.warning("face处理失败或不支持")
                 case RealMessageType.reply:
                     if not in_reply:
                         ret_seg = await self.handle_reply_message(sub_message)
@@ -278,7 +283,11 @@ class RecvHandler:
                     logger.warning("暂时不支持链接解析")
                     pass
                 case RealMessageType.forward:
-                    forward_message_id = sub_message.get("data").get("id")
+                    forward_message_data = sub_message.get("data")
+                    if not forward_message_data:
+                        logger.warning("转发消息内容为空")
+                        return None
+                    forward_message_id = forward_message_data.get("id")
                     request_uuid = str(uuid.uuid4())
                     payload = json.dumps(
                         {
@@ -336,15 +345,25 @@ class RecvHandler:
         seg_data = Seg(type=RealMessageType.text, data=plain_text)
         return seg_data
 
-    async def handle_face_message(self) -> None:
+    async def handle_face_message(self, raw_message: dict) -> Seg | None:
         """
         处理表情消息
-
-        支持未完成
+        Parameters:
+            raw_message: dict: 原始消息
+        Returns:
+            seg_data: Seg: 处理后的消息段
         """
-        pass
+        message_data: dict = raw_message.get("data")
+        face_raw_id: str = message_data.get("id")
+        if str(face_raw_id) in qq_face:
+            face_content: str = qq_face.get(face_raw_id)
+            seg_data = Seg(type="text", data=face_content)
+            return seg_data
+        else:
+            logger.warning(f"不支持的表情：{face_raw_id}")
+            return None
 
-    async def handle_image_message(self, raw_message: dict) -> Seg:
+    async def handle_image_message(self, raw_message: dict) -> Seg | None:
         """
         处理图片消息与表情包消息
         Parameters:
@@ -368,7 +387,7 @@ class RecvHandler:
             seg_data = Seg(type="emoji", data=image_base64)
             return seg_data
 
-    async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> Seg:
+    async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> Seg | None:
         """
         处理at消息
         Parameters:
@@ -399,12 +418,13 @@ class RecvHandler:
                 else:
                     return None
 
-    async def handle_reply_message(self, raw_message: dict) -> Seg:
+    async def handle_reply_message(self, raw_message: dict) -> Seg | None:
         """
         处理回复消息
 
         """
         raw_message_data: dict = raw_message.get("data")
+        message_id: int = None
         if raw_message_data:
             message_id = raw_message_data.get("id")
         else:
@@ -522,7 +542,7 @@ class RecvHandler:
         logger.info("发送到Maibot处理通知信息")
         await self.message_process(message_base)
 
-    async def handle_poke_notify(self, raw_message: dict) -> Seg:
+    async def handle_poke_notify(self, raw_message: dict) -> Seg | None:
         self_info: dict = await get_self_info(self.server_connection)
         if not self_info:
             logger.error("自身信息获取失败")
@@ -564,7 +584,7 @@ class RecvHandler:
         )
         return seg_data
 
-    async def handle_forward_message(self, message_list: list) -> Seg:
+    async def handle_forward_message(self, message_list: list) -> Seg | None:
         """
         递归处理转发消息，并按照动态方式确定图片处理方式
         Parameters:
@@ -629,7 +649,7 @@ class RecvHandler:
             else:
                 return seg_data
 
-    async def _handle_forward_message(self, message_list: list, layer: int) -> Tuple[Seg, int]:
+    async def _handle_forward_message(self, message_list: list, layer: int) -> Tuple[Seg, int] | Tuple[None, int]:
         """
         递归处理实际转发消息
         Parameters:

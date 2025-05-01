@@ -61,12 +61,10 @@ async def graceful_shutdown():
         await mmc_stop_com()
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
         for task in tasks:
-            if not task.done():
-                task.cancel()
+            task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
-
     except Exception as e:
-        logger.error(f"Adapter关闭失败: {e}")
+        logger.error(f"Adapter关闭中出现错误: {e}")
 
 
 if __name__ == "__main__":
@@ -79,7 +77,8 @@ if __name__ == "__main__":
         loop.run_until_complete(graceful_shutdown())
     except Exception as e:
         logger.exception(f"主程序异常: {str(e)}")
-        if loop and not loop.is_closed():
-            loop.run_until_complete(graceful_shutdown())
-            loop.close()
         sys.exit(1)
+    finally:
+        if loop and not loop.is_closed():
+            loop.close()
+        sys.exit(0)
