@@ -2,8 +2,9 @@ import os
 import sys
 import tomli
 import shutil
-from .logger import logger
+from loguru import logger
 from typing import Optional
+
 
 
 class Config:

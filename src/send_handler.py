@@ -5,7 +5,7 @@ import uuid
 # from .config import global_config
 # 白名单机制不启用
 from .message_queue import get_response
-from .logger import logger
+from .logger import get_module_logger
 
 from maim_message import (
     UserInfo,
@@ -17,6 +17,7 @@ from maim_message import (
 
 from .utils import get_image_format, convert_image_to_gif
 
+logger = get_module_logger("发送处理器")
 
 class SendHandler:
     def __init__(self):

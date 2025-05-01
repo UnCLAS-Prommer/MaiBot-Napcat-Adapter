@@ -2,7 +2,9 @@ import asyncio
 import time
 from typing import Dict
 from .config import global_config
-from .logger import logger
+from .logger import get_module_logger
+
+logger = get_module_logger("消息队列")
 
 response_dict: Dict = {}
 response_time_dict: Dict = {}

@@ -1,4 +1,4 @@
-from .logger import logger
+from .logger import get_module_logger
 from .config import global_config
 from .qq_emoji_list import qq_face
 import time
@@ -30,6 +30,8 @@ from .utils import (
 )
 from .message_queue import get_response
 
+
+logger = get_module_logger("收到消息处理")
 
 class RecvHandler:
     maibot_router: Router = None

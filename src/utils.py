@@ -2,7 +2,7 @@ import websockets as Server
 import json
 import base64
 import uuid
-from .logger import logger
+from .logger import get_module_logger
 from .message_queue import get_response
 
 import urllib3
@@ -11,6 +11,7 @@ import ssl
 from PIL import Image
 import io
 
+logger = get_module_logger("utils")
 
 class SSLAdapter(urllib3.PoolManager):
     def __init__(self, *args, **kwargs):

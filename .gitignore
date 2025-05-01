@@ -3,3 +3,4 @@
 test
 .ruff_cache
 config.toml
+logs/
