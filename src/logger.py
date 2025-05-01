@@ -99,7 +99,7 @@ def get_module_logger(
     # 控制台处理器
     console_id = logger.add(
         sink=sys.stderr,
-        level=os.getenv("CONSOLE_LOG_LEVEL", console_level or current_config["console_level"]),
+        level= global_config.debug_level,
         format=current_config["console_format"],
         filter=lambda record: record["extra"].get("module") == module_name and "custom_style" not in record["extra"],
         enqueue=True,
@@ -114,7 +114,7 @@ def get_module_logger(
 
     file_id = logger.add(
         sink=str(log_file),
-        level=os.getenv("FILE_LOG_LEVEL", file_level or current_config["file_level"]),
+        level="DEBUG",
         format=current_config["file_format"],
         rotation=current_config["rotation"],
         retention=current_config["retention"],
