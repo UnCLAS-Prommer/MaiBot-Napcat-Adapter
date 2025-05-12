@@ -29,8 +29,8 @@ async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> d
     """
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_group_info", "params": {"group_id": group_id}, "echo": request_uuid})
-    await websocket.send(payload)
     try:
+        await websocket.send(payload)
         socket_response: dict = await get_response(request_uuid)
     except TimeoutError:
         logger.error(f"获取群信息超时，群号: {group_id}")
@@ -56,8 +56,8 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
             "echo": request_uuid,
         }
     )
-    await websocket.send(payload)
     try:
+        await websocket.send(payload)
         socket_response: dict = await get_response(request_uuid)
     except TimeoutError:
         logger.error(f"获取成员信息超时，群号: {group_id}, 用户ID: {user_id}")
@@ -70,6 +70,7 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
 
 
 async def get_image_base64(url: str) -> str:
+    # sourcery skip: raise-specific-error
     """获取图片/表情包的Base64"""
     http = SSLAdapter()
     try:
@@ -106,8 +107,8 @@ async def get_self_info(websocket: Server.ServerConnection) -> dict:
     """
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_login_info", "params": {}, "echo": request_uuid})
-    await websocket.send(payload)
     try:
+        await websocket.send(payload)
         response: dict = await get_response(request_uuid)
     except TimeoutError:
         logger.error("获取自身信息超时")
@@ -142,8 +143,8 @@ async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) ->
     """
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_stranger_info", "params": {"user_id": user_id}, "echo": request_uuid})
-    await websocket.send(payload)
     try:
+        await websocket.send(payload)
         response: dict = await get_response(request_uuid)
     except TimeoutError:
         logger.error(f"获取陌生人信息超时，用户ID: {user_id}")
@@ -166,8 +167,8 @@ async def get_message_detail(websocket: Server.ServerConnection, message_id: str
     """
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_msg", "params": {"message_id": message_id}, "echo": request_uuid})
-    await websocket.send(payload)
     try:
+        await websocket.send(payload)
         response: dict = await get_response(request_uuid)
     except TimeoutError:
         logger.error(f"获取消息详情超时，消息ID: {message_id}")

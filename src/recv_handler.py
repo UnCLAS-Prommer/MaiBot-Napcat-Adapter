@@ -66,6 +66,7 @@ class RecvHandler:
             await asyncio.sleep(self.interval)
 
     async def handle_raw_message(self, raw_message: dict) -> None:
+        # sourcery skip: low-code-quality, remove-unreachable-code
         """
         从Napcat接受的原始消息处理
 
@@ -112,10 +113,7 @@ class RecvHandler:
                     raw_message.get("group_id"),
                     sender_info.get("user_id"),
                 )
-                nickname: str = None
-                if fetched_member_info:
-                    nickname = fetched_member_info.get("nickname")
-
+                nickname = fetched_member_info.get("nickname") if fetched_member_info else None
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
@@ -211,6 +209,7 @@ class RecvHandler:
         await self.message_process(message_base)
 
     async def handle_real_message(self, raw_message: dict, in_reply: bool = False) -> List[Seg] | None:
+        # sourcery skip: low-code-quality
         """
         处理实际消息
         Parameters:
@@ -245,8 +244,6 @@ class RecvHandler:
                             seg_message += ret_seg
                         else:
                             logger.warning("reply处理失败")
-                    else:
-                        pass
                 case RealMessageType.image:
                     ret_seg = await self.handle_image_message(sub_message)
                     if ret_seg:
@@ -255,10 +252,8 @@ class RecvHandler:
                         logger.warning("image处理失败")
                 case RealMessageType.record:
                     logger.warning("不支持语音解析")
-                    pass
                 case RealMessageType.video:
                     logger.warning("不支持视频解析")
-                    pass
                 case RealMessageType.at:
                     ret_seg = await self.handle_at_message(
                         sub_message,
@@ -271,17 +266,13 @@ class RecvHandler:
                         logger.warning("at处理失败")
                 case RealMessageType.rps:
                     logger.warning("暂时不支持猜拳魔法表情解析")
-                    pass
                 case RealMessageType.dice:
                     logger.warning("暂时不支持骰子表情解析")
-                    pass
                 case RealMessageType.shake:
                     # 预计等价于戳一戳
                     logger.warning("暂时不支持窗口抖动解析")
-                    pass
                 case RealMessageType.share:
                     logger.warning("暂时不支持链接解析")
-                    pass
                 case RealMessageType.forward:
                     forward_message_data = sub_message.get("data")
                     if not forward_message_data:
@@ -296,9 +287,8 @@ class RecvHandler:
                             "echo": request_uuid,
                         }
                     )
-                    await self.server_connection.send(payload)
-                    # response = await self.server_connection.recv()
                     try:
+                        await self.server_connection.send(payload)
                         response: dict = await get_response(request_uuid)
                     except TimeoutError:
                         logger.error("获取转发消息超时")
@@ -326,10 +316,8 @@ class RecvHandler:
                         logger.warning("转发消息处理失败")
                 case RealMessageType.node:
                     logger.warning("不支持转发消息节点解析")
-                    pass
                 case _:
                     logger.warning(f"未知消息类型：{sub_message_type}")
-                    pass
         return seg_message
 
     async def handle_text_message(self, raw_message: dict) -> Seg:
@@ -342,8 +330,7 @@ class RecvHandler:
         """
         message_data: dict = raw_message.get("data")
         plain_text: str = message_data.get("text")
-        seg_data = Seg(type=RealMessageType.text, data=plain_text)
-        return seg_data
+        return Seg(type=RealMessageType.text, data=plain_text)
 
     async def handle_face_message(self, raw_message: dict) -> Seg | None:
         """
@@ -354,11 +341,10 @@ class RecvHandler:
             seg_data: Seg: 处理后的消息段
         """
         message_data: dict = raw_message.get("data")
-        face_raw_id: str = message_data.get("id")
-        if str(face_raw_id) in qq_face:
+        face_raw_id: str = str(message_data.get("id"))
+        if face_raw_id in qq_face:
             face_content: str = qq_face.get(face_raw_id)
-            seg_data = Seg(type="text", data=face_content)
-            return seg_data
+            return Seg(type="text", data=face_content)
         else:
             logger.warning(f"不支持的表情：{face_raw_id}")
             return None
@@ -380,14 +366,16 @@ class RecvHandler:
             return None
         if image_sub_type == 0:
             """这部分认为是图片"""
-            seg_data = Seg(type="image", data=image_base64)
-            return seg_data
-        else:
+            return Seg(type="image", data=image_base64)
+        elif image_sub_type == 1:
             """这部分认为是表情包"""
-            seg_data = Seg(type="emoji", data=image_base64)
-            return seg_data
+            return Seg(type="emoji", data=image_base64)
+        else:
+            logger.warning(f"不支持的图片类型：{image_sub_type}")
+            return None
 
     async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> Seg | None:
+        # sourcery skip: use-named-expression
         """
         处理at消息
         Parameters:
@@ -419,6 +407,7 @@ class RecvHandler:
                     return None
 
     async def handle_reply_message(self, raw_message: dict) -> Seg | None:
+        # sourcery skip: move-assign-in-block, use-named-expression
         """
         处理回复消息
 
@@ -434,7 +423,7 @@ class RecvHandler:
             logger.warning("获取被引用的消息详情失败")
             return None
         reply_message = await self.handle_real_message(message_detail, in_reply=True)
-        if reply_message == None:
+        if reply_message is None:
             reply_message = "(获取发言内容失败)"
         sender_info: dict = message_detail.get("sender")
         sender_nickname: str = sender_info.get("nickname")
@@ -443,14 +432,11 @@ class RecvHandler:
         if not sender_nickname:
             logger.warning("无法获取被引用的人的昵称，返回默认值")
             seg_message.append(Seg(type="text", data="[回复 QQ用户(未知id)："))
-            seg_message += reply_message
-            seg_message.append(Seg(type="text", data="]，说："))
-            return seg_message
         else:
             seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
-            seg_message += reply_message
-            seg_message.append(Seg(type="text", data="]，说："))
-            return seg_message
+        seg_message += reply_message
+        seg_message.append(Seg(type="text", data="]，说："))
+        return seg_message
 
     async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")
@@ -466,12 +452,10 @@ class RecvHandler:
                 logger.info("好友撤回一条消息")
                 logger.info(f"撤回消息ID：{raw_message.get('message_id')}, 撤回时间：{raw_message.get('time')}")
                 logger.warning("暂时不支持撤回消息处理")
-                pass
             case NoticeType.group_recall:
                 logger.info("群内用户撤回一条消息")
                 logger.info(f"撤回消息ID：{raw_message.get('message_id')}, 撤回时间：{raw_message.get('time')}")
                 logger.warning("暂时不支持撤回消息处理")
-                pass
             case NoticeType.notify:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
@@ -553,11 +537,7 @@ class RecvHandler:
         raw_info: list = raw_message.get("raw_info")
         # 计算Seg
         if self_id == target_id:
-            if self_info:
-                target_name = self_info.get("nickname")
-            else:
-                logger.warning("无法获取bot的昵称，戳一戳消息可能无效")
-                target_name = "你"
+            target_name = self_info.get("nickname")
         else:
             return None
         try:
@@ -597,17 +577,16 @@ class RecvHandler:
             return None
         if image_count < 5 and image_count > 0:
             # 处理图片数量小于5的情况，此时解析图片为base64
-            parsed_handled_message = await self._recursive_parse_image_seg(handled_message, True)
-            return parsed_handled_message
+            return await self._recursive_parse_image_seg(handled_message, True)
         elif image_count > 0:
             # 处理图片数量大于等于5的情况，此时解析图片为占位符
-            parsed_handled_message = await self._recursive_parse_image_seg(handled_message, False)
-            return parsed_handled_message
+            return await self._recursive_parse_image_seg(handled_message, False)
         else:
             # 处理没有图片的情况，此时直接返回
             return handled_message
 
     async def _recursive_parse_image_seg(self, seg_data: Seg, to_image: bool) -> Seg:
+        # sourcery skip: merge-else-if-into-elif
         if to_image:
             if seg_data.type == "seglist":
                 new_seg_list = []
@@ -642,14 +621,15 @@ class RecvHandler:
                 return Seg(type="seglist", data=new_seg_list)
             elif seg_data.type == "image":
                 image_url = seg_data.data
-                return Seg(type="text", data="【图片】")
+                return Seg(type="text", data="[图片]")
             elif seg_data.type == "emoji":
                 image_url = seg_data.data
-                return Seg(type="text", data="【动画表情】")
+                return Seg(type="text", data="[动画表情]")
             else:
                 return seg_data
 
     async def _handle_forward_message(self, message_list: list, layer: int) -> Tuple[Seg, int] | Tuple[None, int]:
+        # sourcery skip: low-code-quality
         """
         递归处理实际转发消息
         Parameters:
