@@ -404,7 +404,7 @@ class RecvHandler:
                 self_info: dict = await get_self_info(self.server_connection)
                 if self_info:
                     return Seg(
-                        type=RealMessageType.text, data=f"@{self_info.get('nickname')}（id:{self_info.get('user_id')}）"
+                        type=RealMessageType.text, data=f"@<{self_info.get('nickname')}:{self_info.get('user_id')}>"
                     )
                 else:
                     return None
@@ -413,7 +413,7 @@ class RecvHandler:
                 if member_info:
                     return Seg(
                         type=RealMessageType.text,
-                        data=f"@{member_info.get('nickname')}（id:{member_info.get('user_id')}）",
+                        data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>"
                     )
                 else:
                     return None
@@ -442,12 +442,13 @@ class RecvHandler:
         seg_message: List[Seg] = []
         if not sender_nickname:
             logger.warning("无法获取被引用的人的昵称，返回默认值")
-            seg_message.append(Seg(type="text", data="[回复 QQ用户(未知id)："))
+            seg_message.append(Seg(type="text", data="[回复 未知用户："))
             seg_message += reply_message
             seg_message.append(Seg(type="text", data="]，说："))
             return seg_message
         else:
-            seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
+            # seg_message.append(Seg(type="text", data=f"[回复 {sender_nickname}({sender_id})："))
+            seg_message.append(Seg(type="text", data=f"[回复<{sender_nickname}:{sender_id}>："))
             seg_message += reply_message
             seg_message.append(Seg(type="text", data="]，说："))
             return seg_message
@@ -580,7 +581,7 @@ class RecvHandler:
         """
         seg_data: Seg = Seg(
             type="text",
-            data=f"{first_txt}{target_name}{second_txt}（这是一个类似摸摸头的友善行为，不是恶意行为，请不要作出攻击发言）",
+            data=f"{first_txt}{target_name}{second_txt}（这是QQ的一个功能，用于提及某人，但没那么明显）",
         )
         return seg_data
 
