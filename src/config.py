@@ -22,7 +22,7 @@ class Config:
         self.root_path = os.path.join(src_path, "..")
         self.config_path = os.path.join(self.root_path, "config.toml")
 
-    def load_config(self):
+    def load_config(self):  # sourcery skip: extract-method, move-assign
         include_configs = ["Nickname", "Napcat_Server", "MaiBot_Server", "Debug", "Voice"]
         if os.path.exists(self.config_path):
             with open(self.config_path, "rb") as f:

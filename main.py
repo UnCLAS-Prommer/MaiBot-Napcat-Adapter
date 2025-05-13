@@ -17,11 +17,7 @@ async def message_recv(server_connection: Server.ServerConnection):
         logger.debug(f"{raw_message[:80]}..." if len(raw_message) > 80 else raw_message)
         decoded_raw_message: dict = json.loads(raw_message)
         post_type = decoded_raw_message.get("post_type")
-        if post_type == "meta_event":
-            await message_queue.put(decoded_raw_message)
-        elif post_type == "message":
-            await message_queue.put(decoded_raw_message)
-        elif post_type == "notice":
+        if post_type in ["meta_event","message","notice"]:
             await message_queue.put(decoded_raw_message)
         elif post_type is None:
             await put_response(decoded_raw_message)

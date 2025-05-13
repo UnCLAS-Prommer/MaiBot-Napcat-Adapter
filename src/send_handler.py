@@ -2,7 +2,7 @@ import json
 import websockets as Server
 import uuid
 
-# from .config import global_config
+from .config import global_config
 # 白名单机制不启用
 from .message_queue import get_response
 from .logger import logger
@@ -86,6 +86,7 @@ class SendHandler:
         return payload
 
     def process_message_by_type(self, seg: Seg, payload: list) -> list:
+        # sourcery skip: reintroduce-else, swap-if-else-branches, use-named-expression
         new_payload = payload
         if seg.type == "reply":
             target_id = seg.data
@@ -111,6 +112,7 @@ class SendHandler:
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
+        # sourcery skip: for-append-to-extend, merge-list-append, simplify-generator
         """构建发送的消息体"""
         if is_reply:
             temp_list = []
@@ -128,8 +130,7 @@ class SendHandler:
 
     def handle_text_message(self, message: str) -> dict:
         """处理文本消息"""
-        ret = {"type": "text", "data": {"text": message}}
-        return ret
+        return {"type": "text", "data": {"text": message}}
 
     def handle_image_message(self, encoded_image: str) -> dict:
         """处理图片消息"""
@@ -158,6 +159,9 @@ class SendHandler:
 
     def handle_voice_message(self, encoded_voice: str) -> dict:
         """处理语音消息"""
+        if not global_config.use_tts:
+            logger.warning("未启用语音消息处理")
+            return {}
         if not encoded_voice:
             return {}
         return {
