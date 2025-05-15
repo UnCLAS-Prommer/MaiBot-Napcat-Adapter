@@ -16,6 +16,11 @@ group_list = []
 private_list = []
 enable_temp = false
 
+[Notify] # 戳一戳响应
+enable = true       # 是否将戳一戳转化为文本
+auto_group = false  # 群聊自动戳回去
+auto_friend = false # 私聊自动戳回去
+
 [Voice] # 发送语音设置
 use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
 

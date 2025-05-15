@@ -20,6 +20,7 @@ from maim_message import (
     Router,
 )
 
+from .send_handler import send_handler
 from .utils import (
     get_group_info,
     get_member_info,
@@ -467,7 +468,7 @@ class RecvHandler:
                 logger.warning("不支持的notice类型")
                 return None
         if not handled_message:
-            logger.warning("notice处理失败或不支持")
+            logger.warning("notice处理失败或被跳过")
             return None
 
         source_name: str = None
@@ -533,13 +534,31 @@ class RecvHandler:
             return None
         self_id = raw_message.get("self_id")
         target_id = raw_message.get("target_id")
-        target_name: str = None
+        if self_id != target_id: # 不响应别人戳别人
+            return None
+        sender_id = raw_message.get("sender_id")
+        group_id = raw_message.get("group_id")
+        user_id = raw_message.get("user_id")
+        if group_id and global_config.notify_auto_group:
+            await send_handler.send_message_to_napcat(
+                action="group_poke",
+                params={
+                    "group_id": group_id,
+                    "user_id": user_id
+                }
+            )
+        if sender_id and global_config.notify_auto_friend:
+            await send_handler.send_message_to_napcat(
+                action="friend_poke",
+                params={
+                    "user_id": user_id
+                }
+            )
+        if not global_config.notify_enable:
+            return None
         raw_info: list = raw_message.get("raw_info")
         # 计算Seg
-        if self_id == target_id:
-            target_name = self_info.get("nickname")
-        else:
-            return None
+        target_name: str = self_info.get("nickname")
         try:
             first_txt = raw_info[2].get("txt", "戳了戳")
             second_txt = raw_info[4].get("txt", "")

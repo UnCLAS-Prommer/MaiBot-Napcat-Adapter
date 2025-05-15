@@ -47,6 +47,9 @@ class Config:
             self.mai_port = raw_config["MaiBot_Server"].get("port", 8000)
             self.debug_level = raw_config["Debug"].get("level", "INFO")
             self.use_tts = raw_config["Voice"].get("use_tts", False)
+            self.notify_enable = raw_config["Notify"].get("enable", True)
+            self.notify_auto_group = raw_config["Notify"].get("auto_group", False)
+            self.notify_auto_friend = raw_config["Notify"].get("auto_friend", False)
         else:
             logger.error("配置文件不存在！")
             logger.info("正在创建配置文件...")
