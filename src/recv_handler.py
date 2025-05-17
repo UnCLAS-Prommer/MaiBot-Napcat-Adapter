@@ -494,7 +494,10 @@ class RecvHandler:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
                     case NoticeType.Notify.poke:
-                        handled_message: Seg = await self.handle_poke_notify(raw_message)
+                        if global_config.enable_poke:
+                            handled_message: Seg = await self.handle_poke_notify(raw_message)
+                        else:
+                            logger.warning("戳一戳消息被禁用")
                     case _:
                         logger.warning("不支持的notify类型")
             case _:

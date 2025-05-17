@@ -18,6 +18,7 @@ list_type = "whitelist" # 使用的白名单类型，可选为：whitelist, blac
 group_list = [] # 群组名单
 private_list = [] # 私聊名单
 ban_user_id = [] # 禁止名单（禁止名单中的人无法使用任何功能）
+enable_poke = true # 是否启用戳一戳功能
 
 [Voice] # 发送语音设置
 use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
