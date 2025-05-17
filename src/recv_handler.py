@@ -151,13 +151,16 @@ class RecvHandler:
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
 
-                if global_config.list_type == "whitelist" and raw_message.get("group_id") not in global_config.group_list:
+                if (
+                    global_config.list_type == "whitelist"
+                    and raw_message.get("group_id") not in global_config.group_list
+                ):
                     logger.warning("群聊不在白名单中，消息被丢弃")
                     return None
                 if global_config.list_type == "blacklist" and raw_message.get("group_id") in global_config.group_list:
                     logger.warning("群聊在黑名单中，消息被丢弃")
                     return None
-                
+
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
