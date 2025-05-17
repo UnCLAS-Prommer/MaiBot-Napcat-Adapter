@@ -83,10 +83,10 @@ class RecvHandler:
                 logger.warning("群聊在黑名单中，消息被丢弃")
                 return False
         else:
-            if global_config.list_type == "whitelist" and user_id not in global_config.user_list:
+            if global_config.list_type == "whitelist" and user_id not in global_config.private_list:
                 logger.warning("用户不在白名单中，消息被丢弃")
                 return False
-            elif global_config.list_type == "blacklist" and user_id in global_config.user_list:
+            elif global_config.list_type == "blacklist" and user_id in global_config.private_list:
                 logger.warning("用户在黑名单中，消息被丢弃")
                 return False
         if user_id in global_config.ban_user_id:
