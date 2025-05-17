@@ -15,9 +15,9 @@ import io
 class SSLAdapter(urllib3.PoolManager):
     def __init__(self, *args, **kwargs):
         context = ssl.create_default_context()
-        context.set_ciphers('DEFAULT@SECLEVEL=1')
+        context.set_ciphers("DEFAULT@SECLEVEL=1")
         context.minimum_version = ssl.TLSVersion.TLSv1_2
-        kwargs['ssl_context'] = context
+        kwargs["ssl_context"] = context
         super().__init__(*args, **kwargs)
 
 
@@ -74,7 +74,7 @@ async def get_image_base64(url: str) -> str:
     """获取图片/表情包的Base64"""
     http = SSLAdapter()
     try:
-        response = http.request('GET', url, timeout=10)
+        response = http.request("GET", url, timeout=10)
         if response.status != 200:
             raise Exception(f"HTTP Error: {response.status}")
         image_bytes = response.data

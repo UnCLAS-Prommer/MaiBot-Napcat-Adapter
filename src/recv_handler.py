@@ -88,6 +88,13 @@ class RecvHandler:
             if sub_type == MessageType.Private.friend:
                 sender_info: dict = raw_message.get("sender")
 
+                if global_config.list_type == "whitelist" and sender_info.get("user_id") not in global_config.user_list:
+                    logger.warning("用户不在白名单中，消息被丢弃")
+                    return None
+                if global_config.list_type == "blacklist" and sender_info.get("user_id") in global_config.user_list:
+                    logger.warning("用户在黑名单中，消息被丢弃")
+                    return None
+
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
@@ -144,6 +151,13 @@ class RecvHandler:
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
 
+                if global_config.list_type == "whitelist" and raw_message.get("group_id") not in global_config.group_list:
+                    logger.warning("群聊不在白名单中，消息被丢弃")
+                    return None
+                if global_config.list_type == "blacklist" and raw_message.get("group_id") in global_config.group_list:
+                    logger.warning("群聊在黑名单中，消息被丢弃")
+                    return None
+                
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
                     platform=global_config.platform,
@@ -400,8 +414,7 @@ class RecvHandler:
                 member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=qq_id)
                 if member_info:
                     return Seg(
-                        type=RealMessageType.text,
-                        data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>"
+                        type=RealMessageType.text, data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>"
                     )
                 else:
                     return None
