@@ -5,7 +5,7 @@ import time
 import asyncio
 import json
 import websockets as Server
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import uuid
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
@@ -65,6 +65,35 @@ class RecvHandler:
                 logger.debug("心跳正常")
             await asyncio.sleep(self.interval)
 
+    def check_allow_to_chat(self, user_id: int, group_id: Optional[int]) -> bool:
+        # sourcery skip: hoist-statement-from-if, merge-else-if-into-elif
+        """
+        检查是否允许聊天
+        Parameters:
+            user_id: int: 用户ID
+            group_id: int: 群ID
+        Returns:
+            bool: 是否允许聊天
+        """
+        if group_id:
+            if global_config.list_type == "whitelist" and group_id not in global_config.group_list:
+                logger.warning("群聊不在白名单中，消息被丢弃")
+                return False
+            elif global_config.list_type == "blacklist" and group_id in global_config.group_list:
+                logger.warning("群聊在黑名单中，消息被丢弃")
+                return False
+        else:
+            if global_config.list_type == "whitelist" and user_id not in global_config.user_list:
+                logger.warning("用户不在白名单中，消息被丢弃")
+                return False
+            elif global_config.list_type == "blacklist" and user_id in global_config.user_list:
+                logger.warning("用户在黑名单中，消息被丢弃")
+                return False
+        if user_id in global_config.ban_user_id:
+            logger.warning("用户在黑名单中，消息被丢弃")
+            return False
+        return True
+
     async def handle_raw_message(self, raw_message: dict) -> None:
         # sourcery skip: low-code-quality, remove-unreachable-code
         """
@@ -88,11 +117,7 @@ class RecvHandler:
             if sub_type == MessageType.Private.friend:
                 sender_info: dict = raw_message.get("sender")
 
-                if global_config.list_type == "whitelist" and sender_info.get("user_id") not in global_config.user_list:
-                    logger.warning("用户不在白名单中，消息被丢弃")
-                    return None
-                if global_config.list_type == "blacklist" and sender_info.get("user_id") in global_config.user_list:
-                    logger.warning("用户在黑名单中，消息被丢弃")
+                if not self.check_allow_to_chat(sender_info.get("user_id"), None):
                     return None
 
                 # 发送者用户信息
@@ -151,14 +176,7 @@ class RecvHandler:
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
 
-                if (
-                    global_config.list_type == "whitelist"
-                    and raw_message.get("group_id") not in global_config.group_list
-                ):
-                    logger.warning("群聊不在白名单中，消息被丢弃")
-                    return None
-                if global_config.list_type == "blacklist" and raw_message.get("group_id") in global_config.group_list:
-                    logger.warning("群聊在黑名单中，消息被丢弃")
+                if not self.check_allow_to_chat(sender_info.get("user_id"), raw_message.get("group_id")):
                     return None
 
                 # 发送者用户信息
