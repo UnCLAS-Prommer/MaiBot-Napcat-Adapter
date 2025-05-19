@@ -76,21 +76,21 @@ class RecvHandler:
             bool: 是否允许聊天
         """
         if group_id:
-            if global_config.list_type == "whitelist" and group_id not in global_config.group_list:
-                logger.warning("群聊不在白名单中，消息被丢弃")
+            if global_config.group_list_type == "whitelist" and group_id not in global_config.group_list:
+                logger.warning("群聊不在聊天白名单中，消息被丢弃")
                 return False
-            elif global_config.list_type == "blacklist" and group_id in global_config.group_list:
-                logger.warning("群聊在黑名单中，消息被丢弃")
+            elif global_config.group_list_type == "blacklist" and group_id in global_config.group_list:
+                logger.warning("群聊在聊天黑名单中，消息被丢弃")
                 return False
         else:
-            if global_config.list_type == "whitelist" and user_id not in global_config.private_list:
-                logger.warning("用户不在白名单中，消息被丢弃")
+            if global_config.private_list_type == "whitelist" and user_id not in global_config.private_list:
+                logger.warning("用户不在聊天白名单中，消息被丢弃")
                 return False
-            elif global_config.list_type == "blacklist" and user_id in global_config.private_list:
-                logger.warning("用户在黑名单中，消息被丢弃")
+            elif global_config.private_list_type == "blacklist" and user_id in global_config.private_list:
+                logger.warning("用户在聊天黑名单中，消息被丢弃")
                 return False
         if user_id in global_config.ban_user_id:
-            logger.warning("用户在黑名单中，消息被丢弃")
+            logger.warning("用户在全局黑名单中，消息被丢弃")
             return False
         return True
 

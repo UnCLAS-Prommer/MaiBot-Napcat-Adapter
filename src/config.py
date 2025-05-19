@@ -55,13 +55,17 @@ class Config:
             logger.critical("请在配置文件中指定平台")
             sys.exit(1)
 
-        self.list_type: str = raw_config["Chat"].get("list_type")
+        self.group_list_type: str = raw_config["Chat"].get("group_list_type")
         self.group_list: list = raw_config["Chat"].get("group_list", [])
+        self.private_list_type: str = raw_config["Chat"].get("private_list_type")
         self.private_list: list = raw_config["Chat"].get("private_list", [])
         self.ban_user_id: list = raw_config["Chat"].get("ban_user_id", [])
         self.enable_poke: bool = raw_config["Chat"].get("enable_poke", True)
-        if not self.list_type or self.list_type not in ["whitelist", "blacklist"]:
-            logger.critical("请在配置文件中指定list_type或list_type填写错误")
+        if self.group_list_type not in ["whitelist", "blacklist"]:
+            logger.critical("请在配置文件中指定group_list_type或group_list_type填写错误")
+            sys.exit(1)
+        if self.private_list_type not in ["whitelist", "blacklist"]:
+            logger.critical("请在配置文件中指定private_list_type或private_list_type填写错误")
             sys.exit(1)
 
         self.use_tts = raw_config["Voice"].get("use_tts", False)
