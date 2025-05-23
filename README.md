@@ -2,38 +2,7 @@
 运行方式：独立/放在MaiBot本体作为插件
 
 # 使用说明
-首先，napcat开**websocket客户端**，设置URL为类似这样：`ws://localhost:8095`
-
-然后说明一下配置文件：
-
-```
-[Nickname] # 现在没用
-nickname = ""
-
-[Napcat_Server] # Napcat连接的ws服务设置
-host = "localhost" # Napcat设定的url地址
-port = 8095        # Napcat设定的ws端口
-
-[MaiBot_Server] # 连接麦麦的ws服务设置
-platform_name = "qq" # 标识adapter的名称（必填）
-host = "localhost"   # 麦麦在.env文件中设置的url地址
-port = 8000          # 麦麦在.env文件中设置的ws端口
-
-[Napcat]
-heartbeat = 30 # 与Napcat设置的心跳相同（按秒计）
-
-[Whitelist] # 白名单功能（未启用）（未实现）
-group_list = []
-private_list = []
-enable_temp = false
-
-[Debug]
-level = "INFO" # 日志等级（DEBUG, INFO, WARNING, ERROR）
-```
-
-你需要的就是把template_config.toml复制到根目录，然后改
-
-至于requirements，需要maim_message，安装略
+请参考[官方文档](https://docs.mai-mai.org/manual/adapters/napcat.html)
 
 # 消息流转过程
 
