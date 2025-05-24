@@ -27,6 +27,7 @@ async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> d
 
     返回值需要处理可能为空的情况
     """
+    logger.debug("获取群聊信息中")
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_group_info", "params": {"group_id": group_id}, "echo": request_uuid})
     try:
@@ -48,6 +49,7 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
 
     返回值需要处理可能为空的情况
     """
+    logger.debug("获取群成员信息中")
     request_uuid = str(uuid.uuid4())
     payload = json.dumps(
         {
@@ -72,6 +74,7 @@ async def get_member_info(websocket: Server.ServerConnection, group_id: int, use
 async def get_image_base64(url: str) -> str:
     # sourcery skip: raise-specific-error
     """获取图片/表情包的Base64"""
+    logger.debug(f"下载图片: {url}")
     http = SSLAdapter()
     try:
         response = http.request("GET", url, timeout=10)
@@ -85,6 +88,14 @@ async def get_image_base64(url: str) -> str:
 
 
 def convert_image_to_gif(image_base64: str) -> str:
+    """
+    将Base64编码的图片转换为GIF格式
+    Parameters:
+        image_base64: str: Base64编码的图片数据
+    Returns:
+        str: Base64编码的GIF图片数据
+    """
+    logger.debug("转换图片为GIF格式")
     try:
         image_bytes = base64.b64decode(image_base64)
         image = Image.open(io.BytesIO(image_bytes))
@@ -105,6 +116,7 @@ async def get_self_info(websocket: Server.ServerConnection) -> dict:
     Returns:
         data: dict: 返回的自身信息
     """
+    logger.debug("获取自身信息中")
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_login_info", "params": {}, "echo": request_uuid})
     try:
@@ -141,6 +153,7 @@ async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) ->
     Returns:
         dict: 返回的陌生人信息
     """
+    logger.debug("获取陌生人信息中")
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_stranger_info", "params": {"user_id": user_id}, "echo": request_uuid})
     try:
@@ -165,6 +178,7 @@ async def get_message_detail(websocket: Server.ServerConnection, message_id: str
     Returns:
         dict: 返回的消息详情
     """
+    logger.debug("获取消息详情中")
     request_uuid = str(uuid.uuid4())
     payload = json.dumps({"action": "get_msg", "params": {"message_id": message_id}, "echo": request_uuid})
     try:

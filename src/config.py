@@ -42,6 +42,7 @@ class Config:
         for key in include_configs:
             if key not in raw_config:
                 logger.error(f"配置文件中缺少必需的字段: '{key}'")
+                logger.error("你的配置文件可能过时，请尝试手动更新配置文件。")
                 sys.exit(1)
 
         self.server_host = raw_config["Napcat_Server"].get("host", "localhost")
@@ -71,6 +72,21 @@ class Config:
         self.use_tts = raw_config["Voice"].get("use_tts", False)
 
         self.debug_level = raw_config["Debug"].get("level", "INFO")
+        if self.debug_level == "DEBUG":
+            logger.debug("原始配置文件内容:")
+            logger.debug(raw_config)
+            logger.debug("读取到的配置内容：")
+            logger.debug(f"平台: {self.platform}")
+            logger.debug(f"MaiBot服务器地址: {self.mai_host}:{self.mai_port}")
+            logger.debug(f"Napcat服务器地址: {self.server_host}:{self.server_port}")
+            logger.debug(f"心跳间隔: {self.napcat_heartbeat_interval}秒")
+            logger.debug(f"群聊列表类型: {self.group_list_type}")
+            logger.debug(f"群聊列表: {self.group_list}")
+            logger.debug(f"私聊列表类型: {self.private_list_type}")
+            logger.debug(f"私聊列表: {self.private_list}")
+            logger.debug(f"禁用用户ID列表: {self.ban_user_id}")
+            logger.debug(f"是否启用TTS: {self.use_tts}")
+            logger.debug(f"调试级别: {self.debug_level}")
 
 
 global_config = Config()

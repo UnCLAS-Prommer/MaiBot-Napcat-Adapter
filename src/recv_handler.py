@@ -5,7 +5,7 @@ import time
 import asyncio
 import json
 import websockets as Server
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 import uuid
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
@@ -75,6 +75,7 @@ class RecvHandler:
         Returns:
             bool: 是否允许聊天
         """
+        logger.debug(f"群聊id: {group_id}, 用户id: {user_id}")
         if group_id:
             if global_config.group_list_type == "whitelist" and group_id not in global_config.group_list:
                 logger.warning("群聊不在聊天白名单中，消息被丢弃")
@@ -84,10 +85,10 @@ class RecvHandler:
                 return False
         else:
             if global_config.private_list_type == "whitelist" and user_id not in global_config.private_list:
-                logger.warning("用户不在聊天白名单中，消息被丢弃")
+                logger.warning("私聊不在聊天白名单中，消息被丢弃")
                 return False
             elif global_config.private_list_type == "blacklist" and user_id in global_config.private_list:
-                logger.warning("用户在聊天黑名单中，消息被丢弃")
+                logger.warning("私聊在聊天黑名单中，消息被丢弃")
                 return False
         if user_id in global_config.ban_user_id:
             logger.warning("用户在全局黑名单中，消息被丢弃")
@@ -110,7 +111,7 @@ class RecvHandler:
         template_info: TemplateInfo = None  # 模板信息，暂时为空，等待启用
         format_info: FormatInfo = FormatInfo(
             content_format=["text", "image", "emoji"],
-            accept_format=["text", "image", "emoji", "reply"],
+            accept_format=["text", "image", "emoji", "reply", "voice"],
         )  # 格式化信息
         if message_type == MessageType.private:
             sub_type = raw_message.get("sub_type")
@@ -169,7 +170,7 @@ class RecvHandler:
                 )
 
             else:
-                logger.warning("私聊消息类型不支持")
+                logger.warning(f"私聊消息类型 {sub_type} 不支持")
                 return None
         elif message_type == MessageType.group:
             sub_type = raw_message.get("sub_type")
@@ -200,7 +201,7 @@ class RecvHandler:
                 )
 
             else:
-                logger.warning("群聊消息类型不支持")
+                logger.warning(f"群聊消息类型 {sub_type} 不支持")
                 return None
 
         additional_config: dict = {}
@@ -221,13 +222,13 @@ class RecvHandler:
 
         # 处理实际信息
         if not raw_message.get("message"):
-            logger.warning("消息内容为空")
+            logger.warning("原始消息内容为空")
             return None
 
         # 获取Seg列表
         seg_message: List[Seg] = await self.handle_real_message(raw_message)
         if not seg_message:
-            logger.warning("消息内容为空")
+            logger.warning("处理后消息内容为空")
             return None
         submit_seg: Seg = Seg(
             type="seglist",
@@ -309,38 +310,7 @@ class RecvHandler:
                 case RealMessageType.share:
                     logger.warning("暂时不支持链接解析")
                 case RealMessageType.forward:
-                    forward_message_data = sub_message.get("data")
-                    if not forward_message_data:
-                        logger.warning("转发消息内容为空")
-                        return None
-                    forward_message_id = forward_message_data.get("id")
-                    request_uuid = str(uuid.uuid4())
-                    payload = json.dumps(
-                        {
-                            "action": "get_forward_msg",
-                            "params": {"message_id": forward_message_id},
-                            "echo": request_uuid,
-                        }
-                    )
-                    try:
-                        await self.server_connection.send(payload)
-                        response: dict = await get_response(request_uuid)
-                    except TimeoutError:
-                        logger.error("获取转发消息超时")
-                        return None
-                    except Exception as e:
-                        logger.error(f"获取转发消息失败: {str(e)}")
-                        return None
-                    logger.debug(
-                        f"转发消息原始格式：{json.dumps(response)[:80]}..."
-                        if len(json.dumps(response)) > 80
-                        else json.dumps(response)
-                    )
-                    response_data: dict = response.get("data")
-                    if not response_data:
-                        logger.warning("转发消息内容为空或获取失败")
-                        return None
-                    messages = response_data.get("messages")
+                    messages = await self.get_forward_message(sub_message)
                     if not messages:
                         logger.warning("转发消息内容为空或获取失败")
                         return None
@@ -352,7 +322,7 @@ class RecvHandler:
                 case RealMessageType.node:
                     logger.warning("不支持转发消息节点解析")
                 case _:
-                    logger.warning(f"未知消息类型：{sub_message_type}")
+                    logger.warning(f"未知消息类型: {sub_message_type}")
         return seg_message
 
     async def handle_text_message(self, raw_message: dict) -> Seg:
@@ -406,7 +376,7 @@ class RecvHandler:
             """这部分认为是表情包"""
             return Seg(type="emoji", data=image_base64)
         else:
-            logger.warning(f"不支持的图片类型：{image_sub_type}")
+            logger.warning(f"不支持的图片子类型：{image_sub_type}")
             return None
 
     async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> Seg | None:
@@ -424,21 +394,52 @@ class RecvHandler:
         if message_data:
             qq_id = message_data.get("qq")
             if str(self_id) == str(qq_id):
+                logger.debug("机器人被at")
                 self_info: dict = await get_self_info(self.server_connection)
                 if self_info:
-                    return Seg(
-                        type=RealMessageType.text, data=f"@<{self_info.get('nickname')}:{self_info.get('user_id')}>"
-                    )
+                    return Seg(type="text", data=f"@<{self_info.get('nickname')}:{self_info.get('user_id')}>")
                 else:
                     return None
             else:
                 member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=qq_id)
                 if member_info:
-                    return Seg(
-                        type=RealMessageType.text, data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>"
-                    )
+                    return Seg(type="text", data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>")
                 else:
                     return None
+
+    async def get_forward_message(self, raw_message: dict) -> Dict[str, Any] | None:
+        forward_message_data: Dict = raw_message.get("data")
+        if not forward_message_data:
+            logger.warning("转发消息内容为空")
+            return None
+        forward_message_id = forward_message_data.get("id")
+        request_uuid = str(uuid.uuid4())
+        payload = json.dumps(
+            {
+                "action": "get_forward_msg",
+                "params": {"message_id": forward_message_id},
+                "echo": request_uuid,
+            }
+        )
+        try:
+            await self.server_connection.send(payload)
+            response: dict = await get_response(request_uuid)
+        except TimeoutError:
+            logger.error("获取转发消息超时")
+            return None
+        except Exception as e:
+            logger.error(f"获取转发消息失败: {str(e)}")
+            return None
+        logger.debug(
+            f"转发消息原始格式：{json.dumps(response)[:80]}..."
+            if len(json.dumps(response)) > 80
+            else json.dumps(response)
+        )
+        response_data: Dict = response.get("data")
+        if not response_data:
+            logger.warning("转发消息内容为空或获取失败")
+            return None
+        return response_data.get("messages")
 
     async def handle_reply_message(self, raw_message: dict) -> Seg | None:
         # sourcery skip: move-assign-in-block, use-named-expression
@@ -497,11 +498,11 @@ class RecvHandler:
                         if global_config.enable_poke:
                             handled_message: Seg = await self.handle_poke_notify(raw_message)
                         else:
-                            logger.warning("戳一戳消息被禁用")
+                            logger.warning("戳一戳消息被禁用，取消戳一戳处理")
                     case _:
-                        logger.warning("不支持的notify类型")
+                        logger.warning(f"不支持的notify类型: {notice_type}.{sub_type}")
             case _:
-                logger.warning("不支持的notice类型")
+                logger.warning(f"不支持的notice类型: {notice_type}")
                 return None
         if not handled_message:
             logger.warning("notice处理失败或不支持")
@@ -538,6 +539,8 @@ class RecvHandler:
             group_name: str = None
             if fetched_group_info:
                 group_name = fetched_group_info.get("group_name")
+            else:
+                logger.warning("无法获取戳一戳消息所在群的名称")
             group_info = GroupInfo(
                 platform=global_config.platform,
                 group_id=group_id,
@@ -581,7 +584,7 @@ class RecvHandler:
             first_txt = raw_info[2].get("txt", "戳了戳")
             second_txt = raw_info[4].get("txt", "")
         except Exception as e:
-            logger.warning(f"解析戳一戳消息失败，使用默认文本：{str(e)}")
+            logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
             first_txt = "戳了戳"
             second_txt = ""
         """
@@ -614,12 +617,15 @@ class RecvHandler:
             return None
         if image_count < 5 and image_count > 0:
             # 处理图片数量小于5的情况，此时解析图片为base64
+            logger.trace("图片数量小于5，开始解析图片为base64")
             return await self._recursive_parse_image_seg(handled_message, True)
         elif image_count > 0:
+            logger.trace("图片数量大于等于5，开始解析图片为占位符")
             # 处理图片数量大于等于5的情况，此时解析图片为占位符
             return await self._recursive_parse_image_seg(handled_message, False)
         else:
             # 处理没有图片的情况，此时直接返回
+            logger.trace("没有图片，直接返回")
             return handled_message
 
     async def _recursive_parse_image_seg(self, seg_data: Seg, to_image: bool) -> Seg:
@@ -648,6 +654,7 @@ class RecvHandler:
                     return Seg(type="text", data="[表情包]")
                 return Seg(type="emoji", data=encoded_image)
             else:
+                logger.trace(f"不处理类型: {seg_data.type}")
                 return seg_data
         else:
             if seg_data.type == "seglist":
@@ -657,12 +664,11 @@ class RecvHandler:
                     new_seg_list.append(parsed_seg)
                 return Seg(type="seglist", data=new_seg_list)
             elif seg_data.type == "image":
-                image_url = seg_data.data
                 return Seg(type="text", data="[图片]")
             elif seg_data.type == "emoji":
-                image_url = seg_data.data
                 return Seg(type="text", data="[动画表情]")
             else:
+                logger.trace(f"不处理类型: {seg_data.type}")
                 return seg_data
 
     async def _handle_forward_message(self, message_list: list, layer: int) -> Tuple[Seg, int] | Tuple[None, int]:
@@ -676,7 +682,7 @@ class RecvHandler:
             seg_data: Seg: 处理后的消息段
             image_count: int: 图片数量
         """
-        seg_list = []
+        seg_list: List[Seg] = []
         image_count = 0
         if message_list is None:
             return None, 0
@@ -693,12 +699,9 @@ class RecvHandler:
             message_of_sub_message = message_of_sub_message_list[0]
             if message_of_sub_message.get("type") == RealMessageType.forward:
                 if layer >= 3:
-                    full_seg_data = (
-                        Seg(
-                            type="text",
-                            data=("--" * layer) + f"【{user_nickname}】:【转发消息】\n",
-                        ),
-                        0,
+                    full_seg_data = Seg(
+                        type="text",
+                        data=("--" * layer) + f"【{user_nickname}】:【转发消息】\n",
                     )
                 else:
                     sub_message_data = message_of_sub_message.get("data")
@@ -719,55 +722,43 @@ class RecvHandler:
                     continue
                 text_message = sub_message_data.get("text")
                 seg_data = Seg(type="text", data=text_message)
+                data_list: List[Any] = []
                 if layer > 0:
-                    seg_list.append(
-                        Seg(
-                            type="seglist",
-                            data=[
-                                Seg(type="text", data=("--" * layer) + user_nickname_str),
-                                seg_data,
-                                break_seg,
-                            ],
-                        )
-                    )
+                    data_list = [
+                        Seg(type="text", data=("--" * layer) + user_nickname_str),
+                        seg_data,
+                        break_seg,
+                    ]
                 else:
-                    seg_list.append(
-                        Seg(
-                            type="seglist",
-                            data=[
-                                Seg(type="text", data=user_nickname_str),
-                                seg_data,
-                                break_seg,
-                            ],
-                        )
-                    )
+                    data_list = [
+                        Seg(type="text", data=user_nickname_str),
+                        seg_data,
+                        break_seg,
+                    ]
+                seg_list.append(Seg(type="seglist", data=data_list))
             elif message_of_sub_message.get("type") == RealMessageType.image:
                 image_count += 1
                 image_data = message_of_sub_message.get("data")
                 sub_type = image_data.get("sub_type")
                 image_url = image_data.get("url")
+                data_list: List[Any] = []
                 if sub_type == 0:
                     seg_data = Seg(type="image", data=image_url)
                 else:
                     seg_data = Seg(type="emoji", data=image_url)
                 if layer > 0:
-                    full_seg_data = Seg(
-                        type="seglist",
-                        data=[
-                            Seg(type="text", data=("--" * layer) + user_nickname_str),
-                            seg_data,
-                            break_seg,
-                        ],
-                    )
+                    data_list = [
+                        Seg(type="text", data=("--" * layer) + user_nickname_str),
+                        seg_data,
+                        break_seg,
+                    ]
                 else:
-                    full_seg_data = Seg(
-                        type="seglist",
-                        data=[
-                            Seg(type="text", data=user_nickname_str),
-                            seg_data,
-                            break_seg,
-                        ],
-                    )
+                    data_list = [
+                        Seg(type="text", data=user_nickname_str),
+                        seg_data,
+                        break_seg,
+                    ]
+                full_seg_data = Seg(type="seglist", data=data_list)
                 seg_list.append(full_seg_data)
         return Seg(type="seglist", data=seg_list), image_count
 

@@ -42,10 +42,12 @@ class SendHandler:
 
         if processed_message:
             if group_info and user_info:
+                logger.debug("发送群聊消息")
                 target_id = group_info.group_id
                 action = "send_group_msg"
                 id_name = "group_id"
             elif user_info:
+                logger.debug("发送私聊消息")
                 target_id = user_info.user_id
                 action = "send_private_msg"
                 id_name = "user_id"
@@ -81,7 +83,7 @@ class SendHandler:
             if not seg_data.data:
                 return []
             for seg in seg_data.data:
-                payload = self.process_message_by_type(seg, payload)
+                payload.extend(self.process_message_by_type(seg, payload))
         else:
             payload = self.process_message_by_type(seg_data, payload)
         return payload
@@ -119,6 +121,9 @@ class SendHandler:
             temp_list = []
             temp_list.append(addon)
             for i in payload:
+                if i.get("type") == "reply":
+                    logger.debug("检测到多个回复，使用最新的回复")
+                    continue
                 temp_list.append(i)
             return temp_list
         else:
