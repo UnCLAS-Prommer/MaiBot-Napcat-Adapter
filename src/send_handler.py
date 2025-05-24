@@ -83,7 +83,7 @@ class SendHandler:
             if not seg_data.data:
                 return []
             for seg in seg_data.data:
-                payload.extend(self.process_message_by_type(seg, payload))
+                payload = self.process_message_by_type(seg, payload)
         else:
             payload = self.process_message_by_type(seg_data, payload)
         return payload
