@@ -1,13 +1,6 @@
 import json
 import websockets as Server
 import uuid
-
-from .config import global_config
-
-# 白名单机制不启用
-from .message_queue import get_response
-from .logger import logger
-
 from maim_message import (
     UserInfo,
     GroupInfo,
@@ -15,7 +8,12 @@ from maim_message import (
     BaseMessageInfo,
     MessageBase,
 )
+from typing import Dict, Any, Tuple
 
+from . import CommandType
+from .config import global_config
+from .message_queue import get_response
+from .logger import logger
 from .utils import get_image_format, convert_image_to_gif
 
 
@@ -23,8 +21,20 @@ class SendHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
 
-    async def handle_seg(self, raw_message_base_dict: dict) -> None:
+    async def handle_message(self, raw_message_base_dict: dict) -> None:
         raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_dict)
+        message_segment: Seg = raw_message_base.message_segment
+        logger.info("接收到来自MaiBot的消息，处理中")
+        if message_segment.type == "command":
+            return await self.send_command(raw_message_base)
+        else:
+            return await self.send_normal_message(raw_message_base)
+
+    async def send_normal_message(self, raw_message_base: MessageBase) -> None:
+        """
+        处理普通消息发送
+        """
+        logger.info("处理普通信息中")
         message_info: BaseMessageInfo = raw_message_base.message_info
         message_segment: Seg = raw_message_base.message_segment
         group_info: GroupInfo = message_info.group_info
@@ -33,42 +43,76 @@ class SendHandler:
         action: str = None
         id_name: str = None
         processed_message: list = []
-        logger.info("接收到来自MaiBot的消息，处理中")
         try:
             processed_message = await self.handle_seg_recursive(message_segment)
         except Exception as e:
             logger.error(f"处理消息时发生错误: {e}")
             return
 
-        if processed_message:
-            if group_info and user_info:
-                logger.debug("发送群聊消息")
-                target_id = group_info.group_id
-                action = "send_group_msg"
-                id_name = "group_id"
-            elif user_info:
-                logger.debug("发送私聊消息")
-                target_id = user_info.user_id
-                action = "send_private_msg"
-                id_name = "user_id"
-            else:
-                logger.error("无法识别的消息类型")
-                return
-            logger.info("尝试发送到napcat")
-            response = await self.send_message_to_napcat(
-                action,
-                {
-                    id_name: target_id,
-                    "message": processed_message,
-                },
-            )
-            if response.get("status") == "ok":
-                logger.info("消息发送成功")
-            else:
-                logger.warning(f"消息发送失败，napcat返回：{str(response)}")
-        else:
+        if not processed_message:
             logger.critical("现在暂时不支持解析此回复！")
             return None
+
+        if group_info and user_info:
+            logger.debug("发送群聊消息")
+            target_id = group_info.group_id
+            action = "send_group_msg"
+            id_name = "group_id"
+        elif user_info:
+            logger.debug("发送私聊消息")
+            target_id = user_info.user_id
+            action = "send_private_msg"
+            id_name = "user_id"
+        else:
+            logger.error("无法识别的消息类型")
+            return
+        logger.info("尝试发送到napcat")
+        response = await self.send_message_to_napcat(
+            action,
+            {
+                id_name: target_id,
+                "message": processed_message,
+            },
+        )
+        if response.get("status") == "ok":
+            logger.info("消息发送成功")
+        else:
+            logger.warning(f"消息发送失败，napcat返回：{str(response)}")
+
+    async def send_command(self, raw_message_base: MessageBase) -> None:
+        """
+        处理命令类
+        """
+        logger.info("处理命令中")
+        message_info: BaseMessageInfo = raw_message_base.message_info
+        message_segment: Seg = raw_message_base.message_segment
+        group_info: GroupInfo = message_info.group_info
+        seg_data: Dict[str, Any] = message_segment.data
+        command_name: str = seg_data.get("name")
+        try:
+            match command_name:
+                case CommandType.GROUP_BAN.name:
+                    command, args_dict = self.handle_ban_command(seg_data.get("args"), group_info)
+                case CommandType.GROUP_WHOLE_BAN.name:
+                    command, args_dict = self.handle_whole_ban_command(seg_data.get("args"), group_info)
+                case CommandType.GROUP_KICK.name:
+                    command, args_dict = self.handle_kick_command(seg_data.get("args"), group_info)
+                case _:
+                    logger.error(f"未知命令: {command_name}")
+                    return
+        except Exception as e:
+            logger.error(f"处理命令时发生错误: {e}")
+            return None
+
+        if not command or not args_dict:
+            logger.error("命令或参数缺失")
+            return None
+
+        response = await self.send_message_to_napcat(command, args_dict)
+        if response.get("status") == "ok":
+            logger.info(f"命令 {command_name} 执行成功")
+        else:
+            logger.warning(f"命令 {command_name} 执行失败，napcat返回：{str(response)}")
 
     def get_level(self, seg_data: Seg) -> int:
         if seg_data.type == "seglist":
@@ -94,15 +138,15 @@ class SendHandler:
         if seg.type == "reply":
             target_id = seg.data
             if target_id == "notice":
-                return []
+                return payload
             new_payload = self.build_payload(payload, self.handle_reply_message(target_id), True)
         elif seg.type == "text":
             text = seg.data
             if not text:
-                return []
+                return payload
             new_payload = self.build_payload(payload, self.handle_text_message(text), False)
         elif seg.type == "face":
-            pass
+            logger.warning("MaiBot 发送了qq原生表情，暂时不支持")
         elif seg.type == "image":
             image = seg.data
             new_payload = self.build_payload(payload, self.handle_image_message(image), False)
@@ -175,6 +219,82 @@ class SendHandler:
             "data": {"file": f"base64://{encoded_voice}"},
         }
 
+    def handle_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """处理封禁命令
+
+        Args:
+            args (Dict[str, Any]): 参数字典
+            group_info (GroupInfo): 群聊信息（对应目标群聊）
+
+        Returns:
+            Tuple[CommandType, Dict[str, Any]]
+        """
+        duration: int = int(args["duration"])
+        user_id: int = int(args["qq_id"])
+        group_id: int = int(group_info.group_id)
+        if duration <= 0:
+            raise ValueError("封禁时间必须大于0")
+        if not user_id or not group_id:
+            raise ValueError("封禁命令缺少必要参数")
+        if duration > 2592000:
+            raise ValueError("封禁时间不能超过30天")
+        return (
+            CommandType.GROUP_BAN.value,
+            {
+                "group_id": group_id,
+                "user_id": user_id,
+                "duration": duration,
+            },
+        )
+
+    def handle_whole_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """处理全体禁言命令
+
+        Args:
+            args (Dict[str, Any]): 参数字典
+            group_info (GroupInfo): 群聊信息（对应目标群聊）
+
+        Returns:
+            Tuple[CommandType, Dict[str, Any]]
+        """
+        enable = args["enable"]
+        assert isinstance(enable, bool), "enable参数必须是布尔值"
+        group_id: int = int(group_info.group_id)
+        if group_id <= 0:
+            raise ValueError("群组ID无效")
+        return (
+            CommandType.GROUP_WHOLE_BAN.value,
+            {
+                "group_id": group_id,
+                "enable": enable,
+            },
+        )
+    
+    def handle_kick_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """处理群成员踢出命令
+
+        Args:
+            args (Dict[str, Any]): 参数字典
+            group_info (GroupInfo): 群聊信息（对应目标群聊）
+
+        Returns:
+            Tuple[CommandType, Dict[str, Any]]
+        """
+        user_id: int = int(args["qq_id"])
+        group_id: int = int(group_info.group_id)
+        if group_id <= 0:
+            raise ValueError("群组ID无效")
+        if user_id <= 0:
+            raise ValueError("用户ID无效")
+        return (
+            CommandType.GROUP_KICK.value,
+            {
+                "group_id": group_id,
+                "user_id": user_id,
+                "reject_add_request": False,  # 不拒绝加群请求
+            },
+        )
+    
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:
         request_uuid = str(uuid.uuid4())
         payload = json.dumps({"action": action, "params": params, "echo": request_uuid})

@@ -16,7 +16,7 @@ router = Router(route_config)
 
 async def mmc_start_com():
     logger.info("正在连接MaiBot")
-    router.register_class_handler(send_handler.handle_seg)
+    router.register_class_handler(send_handler.handle_message)
     await router.run()
 
 
