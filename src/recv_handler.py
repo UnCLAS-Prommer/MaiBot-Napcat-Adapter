@@ -111,7 +111,7 @@ class RecvHandler:
         template_info: TemplateInfo = None  # 模板信息，暂时为空，等待启用
         format_info: FormatInfo = FormatInfo(
             content_format=["text", "image", "emoji"],
-            accept_format=["text", "image", "emoji", "reply", "voice"],
+            accept_format=["text", "image", "emoji", "reply", "voice", "command"],
         )  # 格式化信息
         if message_type == MessageType.private:
             sub_type = raw_message.get("sub_type")
