@@ -441,7 +441,7 @@ class RecvHandler:
             return None
         return response_data.get("messages")
 
-    async def handle_reply_message(self, raw_message: dict) -> Seg | None:
+    async def handle_reply_message(self, raw_message: dict) -> List[Seg] | None:
         # sourcery skip: move-assign-in-block, use-named-expression
         """
         处理回复消息
