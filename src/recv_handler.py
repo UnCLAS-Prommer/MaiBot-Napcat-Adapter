@@ -335,7 +335,7 @@ class RecvHandler:
         """
         message_data: dict = raw_message.get("data")
         plain_text: str = message_data.get("text")
-        return Seg(type=RealMessageType.text, data=plain_text)
+        return Seg(type="text", data=plain_text)
 
     async def handle_face_message(self, raw_message: dict) -> Seg | None:
         """
