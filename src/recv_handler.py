@@ -480,6 +480,11 @@ class RecvHandler:
 
         group_id = raw_message.get("group_id")
         user_id = raw_message.get("user_id")
+
+        if not self.check_allow_to_chat(user_id, group_id):
+            logger.warning("notice消息被丢弃")
+            return None
+
         handled_message: Seg = None
 
         match notice_type:

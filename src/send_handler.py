@@ -269,7 +269,7 @@ class SendHandler:
                 "enable": enable,
             },
         )
-    
+
     def handle_kick_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
         """处理群成员踢出命令
 
@@ -294,7 +294,7 @@ class SendHandler:
                 "reject_add_request": False,  # 不拒绝加群请求
             },
         )
-    
+
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:
         request_uuid = str(uuid.uuid4())
         payload = json.dumps({"action": action, "params": params, "echo": request_uuid})
