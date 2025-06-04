@@ -12,7 +12,7 @@ from typing import Dict, Any, Tuple
 
 from . import CommandType
 from .config import global_config
-from .message_queue import get_response
+from .response_pool import get_response
 from .logger import logger
 from .utils import get_image_format, convert_image_to_gif
 

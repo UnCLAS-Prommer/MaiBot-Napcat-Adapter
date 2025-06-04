@@ -3,7 +3,7 @@ import json
 import base64
 import uuid
 from .logger import logger
-from .message_queue import get_response
+from .response_pool import get_response
 
 import urllib3
 import ssl

@@ -28,7 +28,7 @@ from .utils import (
     get_stranger_info,
     get_message_detail,
 )
-from .message_queue import get_response
+from .response_pool import get_response
 
 
 class RecvHandler:

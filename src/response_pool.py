@@ -6,8 +6,6 @@ from .logger import logger
 
 response_dict: Dict = {}
 response_time_dict: Dict = {}
-message_queue = asyncio.Queue()
-
 
 async def get_response(request_id: str) -> dict:
     retry_count = 0
