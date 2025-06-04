@@ -7,6 +7,7 @@ from .logger import logger
 response_dict: Dict = {}
 response_time_dict: Dict = {}
 
+
 async def get_response(request_id: str) -> dict:
     retry_count = 0
     max_retries = 50  # 10秒超时
