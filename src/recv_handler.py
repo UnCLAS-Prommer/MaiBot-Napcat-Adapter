@@ -36,7 +36,7 @@ class RecvHandler:
 
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
-        self.interval = global_config.napcat_heartbeat_interval
+        self.interval = global_config.napcat_server.heartbeat_interval
 
     async def handle_meta_event(self, message: dict) -> None:
         event_type = message.get("meta_event_type")
@@ -77,20 +77,20 @@ class RecvHandler:
         """
         logger.debug(f"群聊id: {group_id}, 用户id: {user_id}")
         if group_id:
-            if global_config.group_list_type == "whitelist" and group_id not in global_config.group_list:
+            if global_config.chat.group_list_type == "whitelist" and group_id not in global_config.chat.group_list:
                 logger.warning("群聊不在聊天白名单中，消息被丢弃")
                 return False
-            elif global_config.group_list_type == "blacklist" and group_id in global_config.group_list:
+            elif global_config.chat.group_list_type == "blacklist" and group_id in global_config.chat.group_list:
                 logger.warning("群聊在聊天黑名单中，消息被丢弃")
                 return False
         else:
-            if global_config.private_list_type == "whitelist" and user_id not in global_config.private_list:
+            if global_config.chat.private_list_type == "whitelist" and user_id not in global_config.chat.private_list:
                 logger.warning("私聊不在聊天白名单中，消息被丢弃")
                 return False
-            elif global_config.private_list_type == "blacklist" and user_id in global_config.private_list:
+            elif global_config.chat.private_list_type == "blacklist" and user_id in global_config.chat.private_list:
                 logger.warning("私聊在聊天黑名单中，消息被丢弃")
                 return False
-        if user_id in global_config.ban_user_id:
+        if user_id in global_config.chat.ban_user_id:
             logger.warning("用户在全局黑名单中，消息被丢弃")
             return False
         return True
@@ -123,7 +123,7 @@ class RecvHandler:
 
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
-                    platform=global_config.platform,
+                    platform=global_config.maibot_server.platform_name,
                     user_id=sender_info.get("user_id"),
                     user_nickname=sender_info.get("nickname"),
                     user_cardname=sender_info.get("card"),
@@ -149,7 +149,7 @@ class RecvHandler:
                 nickname = fetched_member_info.get("nickname") if fetched_member_info else None
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
-                    platform=global_config.platform,
+                    platform=global_config.maibot_server.platform_name,
                     user_id=sender_info.get("user_id"),
                     user_nickname=nickname,
                     user_cardname=None,
@@ -164,7 +164,7 @@ class RecvHandler:
                     group_name = fetched_group_info.get("group_name")
 
                 group_info: GroupInfo = GroupInfo(
-                    platform=global_config.platform,
+                    platform=global_config.maibot_server.platform_name,
                     group_id=raw_message.get("group_id"),
                     group_name=group_name,
                 )
@@ -182,7 +182,7 @@ class RecvHandler:
 
                 # 发送者用户信息
                 user_info: UserInfo = UserInfo(
-                    platform=global_config.platform,
+                    platform=global_config.maibot_server.platform_name,
                     user_id=sender_info.get("user_id"),
                     user_nickname=sender_info.get("nickname"),
                     user_cardname=sender_info.get("card"),
@@ -195,7 +195,7 @@ class RecvHandler:
                     group_name = fetched_group_info.get("group_name")
 
                 group_info: GroupInfo = GroupInfo(
-                    platform=global_config.platform,
+                    platform=global_config.maibot_server.platform_name,
                     group_id=raw_message.get("group_id"),
                     group_name=group_name,
                 )
@@ -205,12 +205,12 @@ class RecvHandler:
                 return None
 
         additional_config: dict = {}
-        if global_config.use_tts:
+        if global_config.voice.use_tts:
             additional_config["allow_tts"] = True
 
         # 消息信息
         message_info: BaseMessageInfo = BaseMessageInfo(
-            platform=global_config.platform,
+            platform=global_config.maibot_server.platform_name,
             message_id=message_id,
             time=message_time,
             user_info=user_info,
@@ -500,7 +500,7 @@ class RecvHandler:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
                     case NoticeType.Notify.poke:
-                        if global_config.enable_poke:
+                        if global_config.chat.enable_poke:
                             handled_message: Seg = await self.handle_poke_notify(raw_message)
                         else:
                             logger.warning("戳一戳消息被禁用，取消戳一戳处理")
@@ -532,7 +532,7 @@ class RecvHandler:
                 source_name = "QQ用户"
 
         user_info: UserInfo = UserInfo(
-            platform=global_config.platform,
+            platform=global_config.maibot_server.platform_name,
             user_id=user_id,
             user_nickname=source_name,
             user_cardname=source_cardname,
@@ -547,13 +547,13 @@ class RecvHandler:
             else:
                 logger.warning("无法获取戳一戳消息所在群的名称")
             group_info = GroupInfo(
-                platform=global_config.platform,
+                platform=global_config.maibot_server.platform_name,
                 group_id=group_id,
                 group_name=group_name,
             )
 
         message_info: BaseMessageInfo = BaseMessageInfo(
-            platform=global_config.platform,
+            platform=global_config.maibot_server.platform_name,
             message_id="notice",
             time=message_time,
             user_info=user_info,

@@ -35,10 +35,10 @@ async def check_timeout_response() -> None:
         cleaned_message_count: int = 0
         now_time = time.time()
         for echo_id, response_time in list(response_time_dict.items()):
-            if now_time - response_time > global_config.napcat_heartbeat_interval:
+            if now_time - response_time > global_config.napcat_server.heartbeat_interval:
                 cleaned_message_count += 1
                 response_dict.pop(echo_id)
                 response_time_dict.pop(echo_id)
                 logger.warning(f"响应消息 {echo_id} 超时，已删除")
         logger.info(f"已删除 {cleaned_message_count} 条超时响应消息")
-        await asyncio.sleep(global_config.napcat_heartbeat_interval)
+        await asyncio.sleep(global_config.napcat_server.heartbeat_interval)

@@ -209,7 +209,7 @@ class SendHandler:
 
     def handle_voice_message(self, encoded_voice: str) -> dict:
         """处理语音消息"""
-        if not global_config.use_tts:
+        if not global_config.voice.use_tts:
             logger.warning("未启用语音消息处理")
             return {}
         if not encoded_voice:
