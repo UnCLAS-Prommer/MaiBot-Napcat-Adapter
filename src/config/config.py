@@ -14,8 +14,9 @@ from src.config.official_configs import (
     ChatConfig,
     DebugConfig,
     MaiBotServerConfig,
+    MentionInterestConfig,
     NapcatServerConfig,
-    NicknameConfig,
+    NamesConfig,
     VoiceConfig,
 )
 
@@ -106,10 +107,11 @@ def update_config():
 class Config(ConfigBase):
     """总配置类"""
 
-    nickname: NicknameConfig
     napcat_server: NapcatServerConfig
     maibot_server: MaiBotServerConfig
     chat: ChatConfig
+    names: NamesConfig
+    mention_interest: MentionInterestConfig
     voice: VoiceConfig
     debug: DebugConfig
 

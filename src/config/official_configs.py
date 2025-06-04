@@ -15,12 +15,6 @@ ADAPTER_PLATFORM = "qq"
 
 
 @dataclass
-class NicknameConfig(ConfigBase):
-    nickname: str
-    """机器人昵称"""
-
-
-@dataclass
 class NapcatServerConfig(ConfigBase):
     host: str = "localhost"
     """Napcat服务端的主机地址"""
@@ -61,8 +55,38 @@ class ChatConfig(ConfigBase):
     ban_user_id: list[str] = field(default_factory=[])
     """被封禁的用户ID列表，封禁后将无法与其进行交互"""
 
+
+@dataclass
+class NamesConfig(ConfigBase):
+    name: str
+    """机器人全名"""
+
+    alias_names: list[str] = field(default_factory=[])
+    """机器人别名列表，支持多个别名"""
+
+
+@dataclass
+class MentionInterestConfig(ConfigBase):
+    at: float = 1.0
+    """at的兴趣权重"""
+
+    reply: float = 1.0
+    """回复的兴趣权重"""
+
     enable_poke: bool = True
     """是否启用戳一戳功能"""
+
+    poke: float = 1.0
+    """戳一戳的兴趣权重（在启用戳一戳时有效）"""
+
+    enable_mention_in_text: bool = True
+    """是否启用在正文中提及"""
+
+    name_in_text: float = 0.4
+    """正文中提及全名的兴趣权重（在enable_mention_in_text为True时有效）"""
+
+    alias_in_text: float = 0.2
+    """正文中提及别名的兴趣权重（在enable_mention_in_text为True时有效）"""
 
 
 @dataclass

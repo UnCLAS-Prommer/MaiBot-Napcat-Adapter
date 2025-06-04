@@ -264,7 +264,7 @@ class RecvHandler:
                 case RealMessageType.text:
                     ret_seg = await self.handle_text_message(sub_message)
                     if ret_seg:
-                        seg_message.append(ret_seg)
+                        seg_message.extend(ret_seg)
                     else:
                         logger.warning("text处理失败")
                 case RealMessageType.face:
@@ -274,12 +274,20 @@ class RecvHandler:
                     else:
                         logger.warning("face处理失败或不支持")
                 case RealMessageType.reply:
-                    if not in_reply:
-                        ret_seg = await self.handle_reply_message(sub_message)
-                        if ret_seg:
-                            seg_message += ret_seg
-                        else:
-                            logger.warning("reply处理失败")
+                    if in_reply:
+                        # 如果是回复消息，则不再处理回复消息
+                        logger.debug("取消深层回复解析")
+                        seg_message.append(Seg(type="text", data="[回复消息]"))
+                        continue
+
+                    ret_seg = await self.handle_reply_message(
+                        sub_message,
+                        raw_message.get("self_id"),
+                    )
+                    if ret_seg:
+                        seg_message.extend(ret_seg)
+                    else:
+                        logger.warning("reply处理失败")
                 case RealMessageType.image:
                     ret_seg = await self.handle_image_message(sub_message)
                     if ret_seg:
@@ -297,7 +305,7 @@ class RecvHandler:
                         raw_message.get("group_id"),
                     )
                     if ret_seg:
-                        seg_message.append(ret_seg)
+                        seg_message.extend(ret_seg)
                     else:
                         logger.warning("at处理失败")
                 case RealMessageType.rps:
@@ -325,7 +333,7 @@ class RecvHandler:
                     logger.warning(f"未知消息类型: {sub_message_type}")
         return seg_message
 
-    async def handle_text_message(self, raw_message: dict) -> Seg:
+    async def handle_text_message(self, raw_message: dict) -> list[Seg]:
         """
         处理纯文本信息
         Parameters:
@@ -335,7 +343,31 @@ class RecvHandler:
         """
         message_data: dict = raw_message.get("data")
         plain_text: str = message_data.get("text")
-        return Seg(type="text", data=plain_text)
+
+        seg_list = [
+            Seg(type="text", data=plain_text),
+        ]
+
+        if global_config.mention_interest.enable_mention_in_text:
+            # 如果启用了正文中提及
+            if global_config.names.name in plain_text:
+                # 文本中包含机器人的全名，添加提示
+                seg_list.append(
+                    Seg(
+                        type="mention_bot",
+                        data=global_config.mention_interest.name_in_text,
+                    )
+                )
+            elif any(alias_name in plain_text for alias_name in global_config.names.alias_names):
+                # 文本中包含机器人的别名，添加提示
+                seg_list.append(
+                    Seg(
+                        type="mention_bot",
+                        data=global_config.mention_interest.alias_in_text,
+                    )
+                )
+
+        return seg_list
 
     async def handle_face_message(self, raw_message: dict) -> Seg | None:
         """
@@ -379,8 +411,7 @@ class RecvHandler:
             logger.warning(f"不支持的图片子类型：{image_sub_type}")
             return None
 
-    async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> Seg | None:
-        # sourcery skip: use-named-expression
+    async def handle_at_message(self, raw_message: dict, self_id: int, group_id: int) -> List[Seg] | None:
         """
         处理at消息
         Parameters:
@@ -390,22 +421,31 @@ class RecvHandler:
         Returns:
             seg_data: Seg: 处理后的消息段
         """
-        message_data: dict = raw_message.get("data")
-        if message_data:
-            qq_id = message_data.get("qq")
-            if str(self_id) == str(qq_id):
-                logger.debug("机器人被at")
-                self_info: dict = await get_self_info(self.server_connection)
-                if self_info:
-                    return Seg(type="text", data=f"@<{self_info.get('nickname')}:{self_info.get('user_id')}>")
-                else:
-                    return None
-            else:
-                member_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=qq_id)
-                if member_info:
-                    return Seg(type="text", data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>")
-                else:
-                    return None
+        message_data = raw_message.get("data")
+
+        if not message_data:
+            logger.warning("at消息数据为空")
+            return None
+
+        qq_id = message_data.get("qq")
+        if str(self_id) == str(qq_id):
+            logger.debug("机器人被at")
+            self_target = True
+            target_user_info: dict = await get_self_info(self.server_connection)
+        else:
+            self_target = False
+            target_user_info: dict = await get_member_info(self.server_connection, group_id=group_id, user_id=qq_id)
+
+        seg_list = []
+
+        if target_user_info:
+            seg_list.append(Seg(type="text", data=f"@{target_user_info.get('nickname')}"))
+
+        if self_target:
+            # 如果是at机器人，则添加一条提示信息
+            seg_list.append(Seg(type="mention_bot", data=global_config.mention_interest.at))
+
+        return seg_list
 
     async def get_forward_message(self, raw_message: dict) -> Dict[str, Any] | None:
         forward_message_data: Dict = raw_message.get("data")
@@ -441,37 +481,57 @@ class RecvHandler:
             return None
         return response_data.get("messages")
 
-    async def handle_reply_message(self, raw_message: dict) -> List[Seg] | None:
-        # sourcery skip: move-assign-in-block, use-named-expression
+    async def handle_reply_message(self, raw_message: dict, self_id) -> List[Seg] | None:
         """
         处理回复消息
 
         """
-        raw_message_data: dict = raw_message.get("data")
-        message_id: int = None
-        if raw_message_data:
-            message_id = raw_message_data.get("id")
-        else:
+
+        if not (raw_message_data := raw_message.get("data")):
             return None
+
+        message_id = raw_message_data.get("id")
+
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
             return None
-        reply_message = await self.handle_real_message(message_detail, in_reply=True)
-        if reply_message is None:
-            reply_message = "(获取发言内容失败)"
+
+        # 解析被引消息
+        replied_message = await self.handle_real_message(message_detail, in_reply=True)
+        if replied_message is None:
+            replied_message = Seg(type="text", data="(获取消息内容失败)")  # 如果获取被引用消息失败，则返回默认文本
+
+        # 尝试获取被引用消息的发送人
         sender_info: dict = message_detail.get("sender")
-        sender_nickname: str = sender_info.get("nickname")
-        sender_id: str = sender_info.get("user_id")
-        seg_message: List[Seg] = []
-        if not sender_nickname:
-            logger.warning("无法获取被引用的人的昵称，返回默认值")
-            seg_message.append(Seg(type="text", data="[回复 未知用户："))
+        if (
+            sender_info
+            and (sender_nickname := sender_info.get("nickname"))
+            and (sender_id := sender_info.get("user_id"))
+        ):
+            # 如果获取到昵称和id
+            self_target = str(self_id) == str(sender_id)  # 判断是否是回复自己的消息
         else:
-            seg_message.append(Seg(type="text", data=f"[回复<{sender_nickname}:{sender_id}>："))
-        seg_message += reply_message
-        seg_message.append(Seg(type="text", data="]，说："))
-        return seg_message
+            # 如果没有获取到昵称和id
+            logger.warning("无法获取被引用的人的昵称或id，使用默认值")
+            sender_nickname = None
+
+        seg_list = []
+
+        if sender_nickname:
+            seg_list.append(Seg(type="text", data=f"[回复<{sender_nickname}:{sender_id}>："))
+        else:
+            seg_list.append(Seg(type="text", data="[回复 未知用户："))
+
+        seg_list.extend(replied_message)  # 添加被回复的消息体
+
+        seg_list.append(Seg(type="text", data="]，说："))
+
+        if self_target:
+            # 如果是回复自己的消息，则添加提示
+            seg_list.append(Seg(type="mention_bot", data=global_config.mention_interest.reply))
+
+        return seg_list
 
     async def handle_notice(self, raw_message: dict) -> None:
         notice_type = raw_message.get("notice_type")
@@ -500,7 +560,7 @@ class RecvHandler:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
                     case NoticeType.Notify.poke:
-                        if global_config.chat.enable_poke:
+                        if global_config.mention_interest.enable_poke:
                             handled_message: Seg = await self.handle_poke_notify(raw_message)
                         else:
                             logger.warning("戳一戳消息被禁用，取消戳一戳处理")
@@ -580,21 +640,15 @@ class RecvHandler:
         target_id = raw_message.get("target_id")
         target_name: str = None
         raw_info: list = raw_message.get("raw_info")
-        # 计算Seg
-        if self_id == target_id:
-            target_name = self_info.get("nickname")
-        else:
+        if self_id != target_id:
             return None
-        try:
-            first_txt = raw_info[2].get("txt", "戳了戳")
-            second_txt = raw_info[4].get("txt", "")
-        except Exception as e:
-            logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
-            first_txt = "戳了戳"
-            second_txt = ""
+
+        # 如果是戳一戳自己的消息
+        self_target = True
+        target_name = self_info.get("nickname")
         """
-        # 不启用戳其他人的处理
-        else:
+            # 不启用戳其他人的处理
+            self_target = False
             # 由于Napcat不支持获取昵称，所以需要单独获取
             group_id = raw_message.get("group_id")
             fetched_member_info: dict = await get_member_info(
@@ -603,11 +657,31 @@ class RecvHandler:
             if fetched_member_info:
                 target_name = fetched_member_info.get("nickname")
         """
-        seg_data: Seg = Seg(
-            type="text",
-            data=f"{first_txt}{target_name}{second_txt}（这是QQ的一个功能，用于提及某人，但没那么明显）",
-        )
-        return seg_data
+
+        try:
+            first_txt = raw_info[2].get("txt", "戳了戳")
+            second_txt = raw_info[4].get("txt", "")
+        except Exception as e:
+            logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
+            first_txt = "戳了戳"
+            second_txt = ""
+
+        seg_list = [
+            Seg(
+                type="text",
+                data=f"{first_txt}{target_name}{second_txt}（这是QQ的一个功能，用于提及某人，但没那么明显）",
+            )
+        ]
+
+        if self_target:
+            seg_list.append(
+                Seg(
+                    type="mention_bot",
+                    data=global_config.mention_interest.poke,
+                )
+            )
+
+        return Seg(type="seglist", data=seg_list)
 
     async def handle_forward_message(self, message_list: list) -> Seg | None:
         """

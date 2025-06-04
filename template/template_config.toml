@@ -1,9 +1,6 @@
 [inner]
-version = "0.1.0" # 版本号
+version = "0.2.0" # 版本号
 # 请勿修改版本号，除非你知道自己在做什么
-
-[nickname] # 现在没用
-nickname = ""
 
 [napcat_server] # Napcat连接的ws服务设置
 host = "localhost"      # Napcat设定的主机地址
@@ -15,16 +12,33 @@ host = "localhost" # 麦麦在.env文件中设置的主机地址，即HOST字段
 port = 8000        # 麦麦在.env文件中设置的端口，即PORT字段
 
 [chat] # 黑白名单功能
-group_list_type = "whitelist" # 群组名单类型，可选为：whitelist, blacklist
-group_list = []               # 群组名单
 # 当group_list_type为whitelist时，只有群组名单中的群组可以聊天
 # 当group_list_type为blacklist时，群组名单中的任何群组无法聊天
-private_list_type = "whitelist" # 私聊名单类型，可选为：whitelist, blacklist
-private_list = []               # 私聊名单
+# 群组名单类型，可选为：whitelist, blacklist
+group_list_type = "whitelist"
+group_list = []               # 群组名单
+
+# 私聊名单类型，可选为：whitelist, blacklist
 # 当private_list_type为whitelist时，只有私聊名单中的用户可以聊天
 # 当private_list_type为blacklist时，私聊名单中的任何用户无法聊天
-ban_user_id = []   # 全局禁止名单（全局禁止名单中的用户无法进行任何聊天）
-enable_poke = true # 是否启用戳一戳功能
+private_list_type = "whitelist"
+private_list = []               # 私聊名单
+
+# 全局禁止名单（全局禁止名单中的用户无法进行任何聊天）
+ban_user_id = []
+
+[names] # 名称设置，用于正文提及检测
+name = "麦麦"          # bot的全名（大名）
+alias_names = ["牢麦"] # 别名（昵称）列表，支持多个别名
+
+[mention_interest] # 提及兴趣设置（0.0-1.0之间的浮点数，越大越感兴趣）
+at = 1.0                      # at的兴趣权重
+reply = 1.0                   # 回复的兴趣权重
+enable_poke = true            # 是否启用戳一戳功能
+poke = 1.0                    # 戳一戳的兴趣权重
+enable_mention_in_text = true # 是否启用“在正文中提及”
+name_in_text = 0.4            # 正文中提及全名的兴趣权重
+alias_in_text = 0.2           # 正文中提及别名的兴趣权重
 
 [voice] # 发送语音设置
 use_tts = false # 是否使用tts语音（请确保你配置了tts并有对应的adapter）
