@@ -18,7 +18,7 @@ async def message_recv(server_connection: Server.ServerConnection):
     async for raw_message in server_connection:
         logger.debug(
             f"{raw_message[:100]}..."
-            if (len(raw_message) > 100 and global_config.debug_level != "DEBUG")
+            if (len(raw_message) > 100 and global_config.debug.level != "DEBUG")
             else raw_message
         )
         decoded_raw_message: dict = json.loads(raw_message)
@@ -52,8 +52,10 @@ async def main():
 
 async def napcat_server():
     logger.info("正在启动adapter...")
-    async with Server.serve(message_recv, global_config.server_host, global_config.server_port) as server:
-        logger.info(f"Adapter已启动，监听地址: ws://{global_config.server_host}:{global_config.server_port}")
+    async with Server.serve(message_recv, global_config.napcat_server.host, global_config.napcat_server.port) as server:
+        logger.info(
+            f"Adapter已启动，监听地址: ws://{global_config.napcat_server.host}:{global_config.napcat_server.port}"
+        )
         await server.serve_forever()
 
 
