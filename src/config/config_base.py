@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields, MISSING
-from typing import TypeVar, Type, Any, get_origin, get_args, Literal, Dict, List, Set, Tuple, Union
+from typing import TypeVar, Type, Any, get_origin, get_args, Literal, Dict, Union
 
 T = TypeVar("T", bound="ConfigBase")
 
