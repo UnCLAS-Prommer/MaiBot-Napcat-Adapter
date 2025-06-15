@@ -697,7 +697,7 @@ class RecvHandler:
             user_nickname: str = sender_info.get("nickname", "QQ用户")
             user_nickname_str = f"【{user_nickname}】:"
             break_seg = Seg(type="text", data="\n")
-            message_of_sub_message_list: dict = sub_message.get("message")
+            message_of_sub_message_list: List[Dict[str, Any]] = sub_message.get("message")
             if not message_of_sub_message_list:
                 logger.warning("转发消息内容为空")
                 continue

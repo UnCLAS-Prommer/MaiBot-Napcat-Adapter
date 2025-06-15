@@ -49,16 +49,16 @@ class ChatConfig(ConfigBase):
     group_list_type: Literal["whitelist", "blacklist"] = "whitelist"
     """群聊列表类型 白名单/黑名单"""
 
-    group_list: list[str] = field(default_factory=[])
+    group_list: list[int] = field(default_factory=[])
     """群聊列表"""
 
     private_list_type: Literal["whitelist", "blacklist"] = "whitelist"
     """私聊列表类型 白名单/黑名单"""
 
-    private_list: list[str] = field(default_factory=[])
+    private_list: list[int] = field(default_factory=[])
     """私聊列表"""
 
-    ban_user_id: list[str] = field(default_factory=[])
+    ban_user_id: list[int] = field(default_factory=[])
     """被封禁的用户ID列表，封禁后将无法与其进行交互"""
 
     enable_poke: bool = True
