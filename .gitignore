@@ -270,4 +270,5 @@ $RECYCLE.BIN/
 *.lnk
 
 config.toml
+config.toml.back
 test
