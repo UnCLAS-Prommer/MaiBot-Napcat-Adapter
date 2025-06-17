@@ -7,7 +7,7 @@ import json
 import websockets as Server
 from typing import List, Tuple, Optional, Dict, Any
 import uuid
-from plyer import notification, facades
+from plyer import notification
 import os
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
