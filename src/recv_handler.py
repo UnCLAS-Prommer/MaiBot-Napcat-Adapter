@@ -7,6 +7,8 @@ import json
 import websockets as Server
 from typing import List, Tuple, Optional, Dict, Any
 import uuid
+from plyer import notification, facades
+import os
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
 from maim_message import (
@@ -37,6 +39,7 @@ class RecvHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
         self.interval = global_config.napcat_server.heartbeat_interval
+        self._interval_checking = False
 
     async def handle_meta_event(self, message: dict) -> None:
         event_type = message.get("meta_event_type")
@@ -49,6 +52,8 @@ class RecvHandler:
                 asyncio.create_task(self.check_heartbeat(self_id))
         elif event_type == MetaEventType.heartbeat:
             if message["status"].get("online") and message["status"].get("good"):
+                if not self._interval_checking:
+                    asyncio.create_task(self.check_heartbeat())
                 self.last_heart_beat = time.time()
                 self.interval = message.get("interval") / 1000
             else:
@@ -56,10 +61,20 @@ class RecvHandler:
                 logger.warning(f"Bot {self_id} Napcat 端异常！")
 
     async def check_heartbeat(self, id: int) -> None:
+        self._interval_checking = True
         while True:
             now_time = time.time()
-            if now_time - self.last_heart_beat > self.interval + 3:
-                logger.warning(f"Bot {id} 连接已断开")
+            if now_time - self.last_heart_beat > self.interval * 2:
+                logger.error(f"Bot {id} 连接已断开，被下线，或者Napcat卡死！")
+                current_dir = os.path.dirname(__file__)
+                icon_path = os.path.join(current_dir, "..", "assets", "maimai.ico")
+                notification.notify(
+                    title="警告",
+                    message=f"Bot {id} 连接已断开，被下线，或者Napcat卡死！",
+                    app_name="MaiBot Napcat Adapter",
+                    timeout=10,
+                    app_icon=icon_path,
+                )
                 break
             else:
                 logger.debug("心跳正常")
@@ -769,7 +784,9 @@ class RecvHandler:
 
     async def message_process(self, message_base: MessageBase) -> None:
         try:
-            await self.maibot_router.send_message(message_base)
+            send_status = await self.maibot_router.send_message(message_base)
+            if not send_status:
+                raise RuntimeError("发送消息失败，可能是路由未正确配置或连接异常")
         except Exception as e:
             logger.error(f"发送消息失败: {str(e)}")
             logger.error("请检查与MaiBot之间的连接")
