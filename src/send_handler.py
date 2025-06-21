@@ -157,11 +157,11 @@ class SendHandler:
             voice = seg.data
             new_payload = self.build_payload(payload, self.handle_voice_message(voice), False)
         elif seg.type == "voiceurl":
-            voice = seg.data
-            new_payload = self.build_payload(payload, self.handle_voiceurl_message(voice), False)
+            voice_url = seg.data
+            new_payload = self.build_payload(payload, self.handle_voiceurl_message(voice_url), False)
         elif seg.type == "music":
-            music = seg.data
-            new_payload = self.build_payload(payload, self.handle_music_message(music), False)
+            song_id = seg.data
+            new_payload = self.build_payload(payload, self.handle_music_message(song_id), False)
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
