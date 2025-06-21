@@ -156,6 +156,12 @@ class SendHandler:
         elif seg.type == "voice":
             voice = seg.data
             new_payload = self.build_payload(payload, self.handle_voice_message(voice), False)
+        elif seg.type == "voiceurl":
+            voice = seg.data
+            new_payload = self.build_payload(payload, self.handle_voiceurl_message(voice), False)
+        elif seg.type == "music":
+            music = seg.data
+            new_payload = self.build_payload(payload, self.handle_music_message(music), False)
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
@@ -207,27 +213,33 @@ class SendHandler:
             },
         }
 
-
-
-
-    def handle_voice_message(self, voice_data_or_path: str) -> dict:
+    def handle_voice_message(self, encoded_voice: str) -> dict:
         """处理语音消息"""
-       
-        if not voice_data_or_path:
+        if not global_config.use_tts:
+            logger.warning("未启用语音消息处理")
             return {}
-
-        if voice_data_or_path.startswith("file://") or voice_data_or_path.startswith("http://") or voice_data_or_path.startswith("https://"):
-            file_value = voice_data_or_path
-            logger.debug(f"识别到语音数据为路径/URL: {file_value}")
-        elif voice_data_or_path.startswith("base64://"):
-            file_value = voice_data_or_path
-            logger.debug(f"识别到语音数据为 Base64 (带前缀): {file_value[:50]}...")
-        else:
-            file_value = f"base64://{voice_data_or_path}"
-            logger.debug(f"识别到语音数据为 Base64 (无前缀): {voice_data_or_path[:50]}...")
+        if not encoded_voice:
+            return {}
         return {
             "type": "record",
-            "data": {"file": file_value},
+            "data": {"file": f"base64://{encoded_voice}"},
+        }
+
+    def handle_voiceurl_message(self, voice_url: str) -> dict:
+        """处理语音链接消息"""
+        return {
+            "type": "record",
+            "data": {"file": voice_url},
+        }
+
+    def handle_music_message(self, song_id: str) -> dict:
+        """处理音乐消息"""
+        return {
+            "type": "music",
+            "data": {
+                "type": "163",
+                "id": song_id
+            },
         }
 
     def handle_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
@@ -307,25 +319,16 @@ class SendHandler:
         )
 
     async def send_message_to_napcat(self, action: str, params: dict) -> dict:
-        if not self.server_connection:
-            logger.error("Adapter 未连接到平台 API，无法发送消息！")
-            return {"status": "error", "message": "adapter not connected to platform api"}
-
         request_uuid = str(uuid.uuid4())
         payload = json.dumps({"action": action, "params": params, "echo": request_uuid})
-        
+        await self.server_connection.send(payload)
         try:
-            await self.server_connection.send(payload)
-            logger.debug(f"发送平台 API 命令: action={action}, echo={request_uuid}")
-            
             response = await get_response(request_uuid)
-            logger.debug(f"收到平台 API 响应: status={response.get('status')}, echo={response.get('echo')}")
-
         except TimeoutError:
-            logger.error(f"发送平台 API 命令 '{action}' 超时，未收到响应 (echo: {request_uuid})")
+            logger.error("发送消息超时，未收到响应")
             return {"status": "error", "message": "timeout"}
         except Exception as e:
-            logger.error(f"发送平台 API 命令 '{action}' 失败 (echo: {request_uuid}): {e}")
+            logger.error(f"发送消息失败: {e}")
             return {"status": "error", "message": str(e)}
         return response
 
