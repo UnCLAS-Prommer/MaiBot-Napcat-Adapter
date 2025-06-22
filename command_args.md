@@ -5,7 +5,7 @@ Seg.type = "command"
 ## 群聊禁言
 ```python
 Seg.data: Dict[str, Any] = {
-    "name": "GROUP_BAN"
+    "name": "GROUP_BAN",
     "args": {
         "qq_id": "用户QQ号",
         "duration": "禁言时长（秒）"
@@ -16,7 +16,7 @@ Seg.data: Dict[str, Any] = {
 ## 群聊全体禁言
 ```python
 Seg.data: Dict[str, Any] = {
-    "name": "GROUP_WHOLE_BAN"
+    "name": "GROUP_WHOLE_BAN",
     "args": {
         "enable": "是否开启全体禁言（True/False）"
     },
@@ -28,10 +28,20 @@ Seg.data: Dict[str, Any] = {
 ## 群聊踢人
 ```python
 Seg.data: Dict[str, Any] = {
-    "name": "GROUP_KICK"
+    "name": "GROUP_KICK",
     "args": {
         "qq_id": "用户QQ号",
     },
 }
 ```
 其中，群聊ID将会通过Group_Info.group_id自动获取。
+
+## 戳一戳
+```python
+Seg,.data: Dict[str, Any] = {
+    "name": "SEND_POKE",
+    "args": {
+        "qq_id": "目标QQ号"
+    }
+}
+```

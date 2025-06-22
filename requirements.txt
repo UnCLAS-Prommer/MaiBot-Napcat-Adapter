@@ -6,3 +6,4 @@ maim_message
 loguru
 pillow
 tomli
+plyer
