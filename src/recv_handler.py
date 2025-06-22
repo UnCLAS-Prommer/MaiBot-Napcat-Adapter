@@ -7,8 +7,6 @@ import json
 import websockets as Server
 from typing import List, Tuple, Optional, Dict, Any
 import uuid
-from plyer import notification
-import os
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
 from maim_message import (
@@ -66,15 +64,6 @@ class RecvHandler:
             now_time = time.time()
             if now_time - self.last_heart_beat > self.interval * 2:
                 logger.error(f"Bot {id} 连接已断开，被下线，或者Napcat卡死！")
-                current_dir = os.path.dirname(__file__)
-                icon_path = os.path.join(current_dir, "..", "assets", "maimai.ico")
-                notification.notify(
-                    title="警告",
-                    message=f"Bot {id} 连接已断开，被下线，或者Napcat卡死！",
-                    app_name="MaiBot Napcat Adapter",
-                    timeout=10,
-                    app_icon=icon_path,
-                )
                 break
             else:
                 logger.debug("心跳正常")
