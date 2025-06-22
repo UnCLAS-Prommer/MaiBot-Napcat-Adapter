@@ -296,7 +296,7 @@ class SendHandler:
                 "reject_add_request": False,  # 不拒绝加群请求
             },
         )
-    
+
     def handle_poke_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
         """处理戳一戳命令
 
@@ -310,7 +310,7 @@ class SendHandler:
         user_id: int = int(args["qq_id"])
         if group_info == None:
             group_id = None
-        else:        
+        else:
             group_id: int = int(group_info.group_id)
             if group_id <= 0:
                 raise ValueError("群组ID无效")
