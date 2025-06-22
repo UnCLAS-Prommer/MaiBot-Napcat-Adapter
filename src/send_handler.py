@@ -308,7 +308,7 @@ class SendHandler:
             Tuple[CommandType, Dict[str, Any]]
         """
         user_id: int = int(args["qq_id"])
-        if group_info == None:
+        if group_info is None:
             group_id = None
         else:
             group_id: int = int(group_info.group_id)
