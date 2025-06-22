@@ -97,6 +97,8 @@ class SendHandler:
                     command, args_dict = self.handle_whole_ban_command(seg_data.get("args"), group_info)
                 case CommandType.GROUP_KICK.name:
                     command, args_dict = self.handle_kick_command(seg_data.get("args"), group_info)
+                case CommandType.SEND_POKE.name:
+                    command, args_dict = self.handle_poke_command(seg_data.get("args"), group_info)
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
@@ -215,7 +217,7 @@ class SendHandler:
 
     def handle_voice_message(self, encoded_voice: str) -> dict:
         """处理语音消息"""
-        if not global_config.use_tts:
+        if not global_config.voice.use_tts:
             logger.warning("未启用语音消息处理")
             return {}
         if not encoded_voice:
@@ -236,10 +238,7 @@ class SendHandler:
         """处理音乐消息"""
         return {
             "type": "music",
-            "data": {
-                "type": "163",
-                "id": song_id
-            },
+            "data": {"type": "163", "id": song_id},
         }
 
     def handle_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
@@ -315,6 +314,33 @@ class SendHandler:
                 "group_id": group_id,
                 "user_id": user_id,
                 "reject_add_request": False,  # 不拒绝加群请求
+            },
+        )
+
+    def handle_poke_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """处理戳一戳命令
+
+        Args:
+            args (Dict[str, Any]): 参数字典
+            group_info (GroupInfo): 群聊信息（对应目标群聊）
+
+        Returns:
+            Tuple[CommandType, Dict[str, Any]]
+        """
+        user_id: int = int(args["qq_id"])
+        if group_info is None:
+            group_id = None
+        else:
+            group_id: int = int(group_info.group_id)
+            if group_id <= 0:
+                raise ValueError("群组ID无效")
+        if user_id <= 0:
+            raise ValueError("用户ID无效")
+        return (
+            CommandType.SEND_POKE.value,
+            {
+                "group_id": group_id,
+                "user_id": user_id,
             },
         )
 
