@@ -158,6 +158,12 @@ class SendHandler:
         elif seg.type == "voice":
             voice = seg.data
             new_payload = self.build_payload(payload, self.handle_voice_message(voice), False)
+        elif seg.type == "voiceurl":
+            voice_url = seg.data
+            new_payload = self.build_payload(payload, self.handle_voiceurl_message(voice_url), False)
+        elif seg.type == "music":
+            song_id = seg.data
+            new_payload = self.build_payload(payload, self.handle_music_message(song_id), False)
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
@@ -219,6 +225,20 @@ class SendHandler:
         return {
             "type": "record",
             "data": {"file": f"base64://{encoded_voice}"},
+        }
+
+    def handle_voiceurl_message(self, voice_url: str) -> dict:
+        """处理语音链接消息"""
+        return {
+            "type": "record",
+            "data": {"file": voice_url},
+        }
+
+    def handle_music_message(self, song_id: str) -> dict:
+        """处理音乐消息"""
+        return {
+            "type": "music",
+            "data": {"type": "163", "id": song_id},
         }
 
     def handle_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
