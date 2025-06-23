@@ -484,6 +484,7 @@ class RecvHandler:
 
         group_id = raw_message.get("group_id")
         user_id = raw_message.get("user_id")
+        target_id = raw_message.get("target_id")
 
         if not self.check_allow_to_chat(user_id, group_id):
             logger.warning("notice消息被丢弃")
@@ -564,6 +565,7 @@ class RecvHandler:
             group_info=group_info,
             template_info=None,
             format_info=None,
+            additional_config = {"target_id": target_id}
         )
 
         message_base: MessageBase = MessageBase(
@@ -577,39 +579,47 @@ class RecvHandler:
 
     async def handle_poke_notify(self, raw_message: dict) -> Seg | None:
         self_info: dict = await get_self_info(self.server_connection)
+        
         if not self_info:
             logger.error("自身信息获取失败")
             return None
         self_id = raw_message.get("self_id")
         target_id = raw_message.get("target_id")
+        group_id = raw_message.get("group_id")
+        user_id = raw_message.get("user_id")
         target_name: str = None
         raw_info: list = raw_message.get("raw_info")
         # 计算Seg
         if self_id == target_id:
             target_name = self_info.get("nickname")
+            user_name = ""
         else:
-            return None
+            if group_id:
+                user_info: dict = await get_member_info(
+                    self.server_connection, group_id, user_id
+                )
+                fetched_member_info: dict = await get_member_info(
+                    self.server_connection, group_id, target_id
+                )
+                if user_info:
+                    user_name = user_info.get("nickname")
+                else:
+                    user_name = "QQ用户"
+                if fetched_member_info:
+                    target_name = fetched_member_info.get("nickname")
+                else:
+                    target_name = "QQ用户"
+            else:
+                return None
         try:
             first_txt = raw_info[2].get("txt", "戳了戳")
-            second_txt = raw_info[4].get("txt", "")
         except Exception as e:
             logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
             first_txt = "戳了戳"
-            second_txt = ""
-        """
-        # 不启用戳其他人的处理
-        else:
-            # 由于Napcat不支持获取昵称，所以需要单独获取
-            group_id = raw_message.get("group_id")
-            fetched_member_info: dict = await get_member_info(
-                self.server_connection, group_id, target_id
-            )
-            if fetched_member_info:
-                target_name = fetched_member_info.get("nickname")
-        """
+
         seg_data: Seg = Seg(
             type="text",
-            data=f"{first_txt}{target_name}{second_txt}（这是QQ的一个功能，用于提及某人，但没那么明显）",
+            data=f"{user_name}{first_txt}{target_name}（这是QQ的一个功能，用于提及某人，但没那么明显）",
         )
         return seg_data
 
