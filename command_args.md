@@ -38,7 +38,7 @@ Seg.data: Dict[str, Any] = {
 
 ## 戳一戳
 ```python
-Seg,.data: Dict[str, Any] = {
+Seg.data: Dict[str, Any] = {
     "name": "SEND_POKE",
     "args": {
         "qq_id": "目标QQ号"
