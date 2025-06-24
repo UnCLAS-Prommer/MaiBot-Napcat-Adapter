@@ -6,3 +6,5 @@ maim_message
 loguru
 pillow
 tomli
+tomlkit
+rich

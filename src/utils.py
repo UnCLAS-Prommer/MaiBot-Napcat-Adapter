@@ -7,9 +7,10 @@ from .response_pool import get_response
 
 import urllib3
 import ssl
-
+from pathlib import Path
 from PIL import Image
 import io
+import os
 
 
 class SSLAdapter(urllib3.PoolManager):
@@ -88,6 +89,7 @@ async def get_image_base64(url: str) -> str:
 
 
 def convert_image_to_gif(image_base64: str) -> str:
+    # sourcery skip: extract-method
     """
     将Base64编码的图片转换为GIF格式
     Parameters:
@@ -192,3 +194,43 @@ async def get_message_detail(websocket: Server.ServerConnection, message_id: str
         return None
     logger.debug(response)
     return response.get("data")
+
+
+def update_bot_id(data: dict) -> None:
+    """
+    更新用户是否为机器人的字典到根目录下的data文件夹中的qq_bot.json。
+    Parameters:
+        data: dict: 包含需要更新的信息。
+    """
+    json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "qq_bot.json")
+    try:
+        with open(json_path, "w", encoding="utf-8") as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=4)
+        logger.info(f"ID字典已更新到文件: {json_path}")
+    except Exception as e:
+        logger.error(f"更新ID字典失败: {e}")
+
+
+def read_bot_id() -> dict:
+    """
+    从根目录下的data文件夹中的文件读取机器人ID。
+    Returns:
+        list: 读取的机器人ID信息。
+    """
+    json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "qq_bot.json")
+    try:
+        with open(json_path, "r", encoding="utf-8") as json_file:
+            data = json.load(json_file)
+        logger.info(f"已读取机器人ID信息: {data}")
+        return data
+    except FileNotFoundError:
+        logger.warning(f"文件未找到: {json_path}，正在自动创建文件")
+        json_path = Path(os.path.dirname(os.path.dirname(__file__))) / "data" / "qq_bot.json"
+        # 确保父目录存在
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        # 创建空文件
+        json_path.touch(exist_ok=True)
+        return {}
+    except Exception as e:
+        logger.error(f"读取机器人ID失败: {e}")
+        return {}

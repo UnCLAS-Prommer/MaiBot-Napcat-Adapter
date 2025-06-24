@@ -27,6 +27,8 @@ from .utils import (
     get_self_info,
     get_stranger_info,
     get_message_detail,
+    read_bot_id,
+    update_bot_id,
 )
 from .response_pool import get_response
 
@@ -38,6 +40,7 @@ class RecvHandler:
         self.server_connection: Server.ServerConnection = None
         self.interval = global_config.napcat_server.heartbeat_interval
         self._interval_checking = False
+        self.bot_id_list: Dict[int, bool] = {}
 
     async def handle_meta_event(self, message: dict) -> None:
         event_type = message.get("meta_event_type")
@@ -69,7 +72,7 @@ class RecvHandler:
                 logger.debug("心跳正常")
             await asyncio.sleep(self.interval)
 
-    def check_allow_to_chat(self, user_id: int, group_id: Optional[int]) -> bool:
+    async def check_allow_to_chat(self, user_id: int, group_id: Optional[int]) -> bool:
         # sourcery skip: hoist-statement-from-if, merge-else-if-into-elif
         """
         检查是否允许聊天
@@ -79,7 +82,32 @@ class RecvHandler:
         Returns:
             bool: 是否允许聊天
         """
+        user_id = str(user_id)
         logger.debug(f"群聊id: {group_id}, 用户id: {user_id}")
+        if global_config.chat.ban_qq_bot and group_id:
+            logger.debug("开始判断是否为机器人")
+            if not self.bot_id_list:
+                self.bot_id_list = read_bot_id()
+            if user_id in self.bot_id_list:
+                if self.bot_id_list[user_id]:
+                    logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃")
+                    return False
+            else:
+                member_info = await get_member_info(self.server_connection, group_id, user_id)
+                if member_info:
+                    is_bot = member_info.get("is_robot")
+                    if is_bot is None:
+                        logger.warning("无法获取用户是否为机器人，默认为不是但是不进行更新")
+                    else:
+                        if is_bot:
+                            logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃，新机器人加入拦截名单")
+                            self.bot_id_list[user_id] = True
+                            update_bot_id(self.bot_id_list)
+                            return False
+                        else:
+                            self.bot_id_list[user_id] = False
+                            update_bot_id(self.bot_id_list)
+        logger.debug("开始检查聊天白名单/黑名单")
         if group_id:
             if global_config.chat.group_list_type == "whitelist" and group_id not in global_config.chat.group_list:
                 logger.warning("群聊不在聊天白名单中，消息被丢弃")
@@ -122,7 +150,7 @@ class RecvHandler:
             if sub_type == MessageType.Private.friend:
                 sender_info: dict = raw_message.get("sender")
 
-                if not self.check_allow_to_chat(sender_info.get("user_id"), None):
+                if not await self.check_allow_to_chat(sender_info.get("user_id"), None):
                     return None
 
                 # 发送者用户信息
@@ -181,7 +209,7 @@ class RecvHandler:
             if sub_type == MessageType.Group.normal:
                 sender_info: dict = raw_message.get("sender")
 
-                if not self.check_allow_to_chat(sender_info.get("user_id"), raw_message.get("group_id")):
+                if not await self.check_allow_to_chat(sender_info.get("user_id"), raw_message.get("group_id")):
                     return None
 
                 # 发送者用户信息
@@ -486,7 +514,7 @@ class RecvHandler:
         user_id = raw_message.get("user_id")
         target_id = raw_message.get("target_id")
 
-        if not self.check_allow_to_chat(user_id, group_id):
+        if not await self.check_allow_to_chat(user_id, group_id):
             logger.warning("notice消息被丢弃")
             return None
 
