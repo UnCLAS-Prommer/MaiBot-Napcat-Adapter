@@ -484,6 +484,7 @@ class RecvHandler:
 
         group_id = raw_message.get("group_id")
         user_id = raw_message.get("user_id")
+        target_id = raw_message.get("target_id")
 
         if not self.check_allow_to_chat(user_id, group_id):
             logger.warning("notice消息被丢弃")
@@ -564,6 +565,7 @@ class RecvHandler:
             group_info=group_info,
             template_info=None,
             format_info=None,
+            additional_config = {"target_id": target_id}# 在这里塞了一个target_id，方便mmc那边知道被戳的人是谁
         )
 
         message_base: MessageBase = MessageBase(
@@ -577,39 +579,51 @@ class RecvHandler:
 
     async def handle_poke_notify(self, raw_message: dict) -> Seg | None:
         self_info: dict = await get_self_info(self.server_connection)
+        
         if not self_info:
             logger.error("自身信息获取失败")
             return None
         self_id = raw_message.get("self_id")
         target_id = raw_message.get("target_id")
+        group_id = raw_message.get("group_id")
+        user_id = raw_message.get("user_id")
         target_name: str = None
         raw_info: list = raw_message.get("raw_info")
         # 计算Seg
-        if self_id == target_id:
+        if self_id == target_id: # 现在这里应当是专注于处理私聊戳一戳的，也就是说当私聊里，被戳的是另一方时，不会给这个消息。
             target_name = self_info.get("nickname")
+            user_name = "" # 这样的话应该能保证消息大概是“某某某：戳了戳麦麦”，而不是“某某某：某某某戳了戳麦麦”
+
+        elif self_id == user_id:
+            return None # 这应当让ada不发送麦麦戳别人的消息，因为这个消息已经被mmc的命令记录了，没必要记第二次。
+
         else:
-            return None
+            if group_id: # 如果是群聊环境，老实说做这一步判定没啥意义，毕竟私聊是没有其他人之间的戳一戳的，但是感觉可以有这个判定来强限制群聊环境
+                user_info: dict = await get_member_info(
+                    self.server_connection, group_id, user_id
+                )
+                fetched_member_info: dict = await get_member_info(
+                    self.server_connection, group_id, target_id
+                )
+                if user_info:
+                    user_name = user_info.get("nickname")
+                else:
+                    user_name = "QQ用户"
+                if fetched_member_info:
+                    target_name = fetched_member_info.get("nickname")
+                else:
+                    target_name = "QQ用户"
+            else:
+                return None
         try:
             first_txt = raw_info[2].get("txt", "戳了戳")
-            second_txt = raw_info[4].get("txt", "")
         except Exception as e:
             logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
             first_txt = "戳了戳"
-            second_txt = ""
-        """
-        # 不启用戳其他人的处理
-        else:
-            # 由于Napcat不支持获取昵称，所以需要单独获取
-            group_id = raw_message.get("group_id")
-            fetched_member_info: dict = await get_member_info(
-                self.server_connection, group_id, target_id
-            )
-            if fetched_member_info:
-                target_name = fetched_member_info.get("nickname")
-        """
+
         seg_data: Seg = Seg(
             type="text",
-            data=f"{first_txt}{target_name}{second_txt}（这是QQ的一个功能，用于提及某人，但没那么明显）",
+            data=f"{user_name}{first_txt}{target_name}（这是QQ的一个功能，用于提及某人，但没那么明显）",
         )
         return seg_data
 
