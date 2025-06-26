@@ -1,5 +1,5 @@
 [inner]
-version = "0.1.0" # 版本号
+version = "0.1.1" # 版本号
 # 请勿修改版本号，除非你知道自己在做什么
 
 [nickname] # 现在没用
@@ -24,6 +24,7 @@ private_list = []               # 私聊名单
 # 当private_list_type为whitelist时，只有私聊名单中的用户可以聊天
 # 当private_list_type为blacklist时，私聊名单中的任何用户无法聊天
 ban_user_id = []   # 全局禁止名单（全局禁止名单中的用户无法进行任何聊天）
+ban_qq_bot = false # 是否屏蔽QQ官方机器人
 enable_poke = true # 是否启用戳一戳功能
 
 [voice] # 发送语音设置
