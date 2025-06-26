@@ -107,6 +107,7 @@ class RecvHandler:
                         else:
                             self.bot_id_list[user_id] = False
                             update_bot_id(self.bot_id_list)
+        user_id = int(user_id)
         logger.debug("开始检查聊天白名单/黑名单")
         if group_id:
             if global_config.chat.group_list_type == "whitelist" and group_id not in global_config.chat.group_list:
