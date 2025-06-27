@@ -21,6 +21,10 @@ class SendHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
 
+    def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
+        """设置Napcat连接"""
+        self.server_connection = server_connection
+
     async def handle_message(self, raw_message_base_dict: dict) -> None:
         raw_message_base: MessageBase = MessageBase.from_dict(raw_message_base_dict)
         message_segment: Seg = raw_message_base.message_segment
@@ -254,8 +258,8 @@ class SendHandler:
         duration: int = int(args["duration"])
         user_id: int = int(args["qq_id"])
         group_id: int = int(group_info.group_id)
-        if duration <= 0:
-            raise ValueError("封禁时间必须大于0")
+        if duration < 0:
+            raise ValueError("封禁时间必须大于等于0")
         if not user_id or not group_id:
             raise ValueError("封禁命令缺少必要参数")
         if duration > 2592000:
