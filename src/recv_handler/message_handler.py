@@ -34,7 +34,7 @@ from src.response_pool import get_response
 class MessageHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
-        self.bot_id_list: Dict[str, bool] = {}
+        self.bot_id_list: Dict[int, bool] = {}
 
     def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
