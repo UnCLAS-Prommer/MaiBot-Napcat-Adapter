@@ -7,3 +7,4 @@ loguru
 pillow
 tomlkit
 rich
+sqlmodel
