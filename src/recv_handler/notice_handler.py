@@ -78,6 +78,7 @@ class NoticeHandler:
 
         group_id = raw_message.get("group_id")
         user_id = raw_message.get("user_id")
+        target_id = raw_message.get("target_id")
 
         handled_message: Seg = None
         user_info: UserInfo = None
@@ -151,6 +152,7 @@ class NoticeHandler:
             group_info=group_info,
             template_info=None,
             format_info=None,
+            additional_config = {"target_id": target_id}# 在这里塞了一个target_id，方便mmc那边知道被戳的人是谁
         )
 
         message_base: MessageBase = MessageBase(
