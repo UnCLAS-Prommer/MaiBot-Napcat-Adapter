@@ -11,7 +11,7 @@ route_config = RouteConfig(
         )
     }
 )
-router = Router(route_config)
+router = Router(route_config, logger)
 
 
 async def mmc_start_com():

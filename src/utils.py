@@ -23,7 +23,7 @@ class SSLAdapter(urllib3.PoolManager):
         super().__init__(*args, **kwargs)
 
 
-async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> dict:
+async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> dict | None:
     """
     获取群相关信息
 
@@ -45,7 +45,7 @@ async def get_group_info(websocket: Server.ServerConnection, group_id: int) -> d
     return socket_response.get("data")
 
 
-async def get_group_detail_info(websocket: Server.ServerConnection, group_id: int) -> dict:
+async def get_group_detail_info(websocket: Server.ServerConnection, group_id: int) -> dict | None:
     """
     获取群详细信息
 
@@ -67,7 +67,7 @@ async def get_group_detail_info(websocket: Server.ServerConnection, group_id: in
     return socket_response.get("data")
 
 
-async def get_member_info(websocket: Server.ServerConnection, group_id: int, user_id: int) -> dict:
+async def get_member_info(websocket: Server.ServerConnection, group_id: int, user_id: int) -> dict | None:
     """
     获取群成员信息
 
@@ -133,7 +133,7 @@ def convert_image_to_gif(image_base64: str) -> str:
         return image_base64
 
 
-async def get_self_info(websocket: Server.ServerConnection) -> dict:
+async def get_self_info(websocket: Server.ServerConnection) -> dict | None:
     """
     获取自身信息
     Parameters:
@@ -169,7 +169,7 @@ def get_image_format(raw_data: str) -> str:
     return Image.open(io.BytesIO(image_bytes)).format.lower()
 
 
-async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) -> dict:
+async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) -> dict | None:
     """
     获取陌生人信息
     Parameters:
@@ -194,7 +194,7 @@ async def get_stranger_info(websocket: Server.ServerConnection, user_id: int) ->
     return response.get("data")
 
 
-async def get_message_detail(websocket: Server.ServerConnection, message_id: Union[str, int]) -> dict:
+async def get_message_detail(websocket: Server.ServerConnection, message_id: Union[str, int]) -> dict | None:
     """
     获取消息详情，可能为空
     Parameters:
