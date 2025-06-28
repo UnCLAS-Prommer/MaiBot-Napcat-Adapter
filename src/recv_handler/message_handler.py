@@ -1,14 +1,22 @@
-from .logger import logger
-from .config import global_config
+from src.logger import logger
+from src.config import global_config
+from src.utils import (
+    get_group_info,
+    get_member_info,
+    get_image_base64,
+    get_self_info,
+    get_message_detail,
+)
 from .qq_emoji_list import qq_face
+from .message_sending import message_send_instance
+from . import RealMessageType, MessageType
+
 import time
-import asyncio
 import json
 import websockets as Server
 from typing import List, Tuple, Optional, Dict, Any
 import uuid
 
-from . import MetaEventType, RealMessageType, MessageType, NoticeType
 from maim_message import (
     UserInfo,
     GroupInfo,
@@ -17,97 +25,54 @@ from maim_message import (
     MessageBase,
     TemplateInfo,
     FormatInfo,
-    Router,
 )
 
-from .utils import (
-    get_group_info,
-    get_member_info,
-    get_image_base64,
-    get_self_info,
-    get_stranger_info,
-    get_message_detail,
-    read_bot_id,
-    update_bot_id,
-)
-from .response_pool import get_response
+
+from src.response_pool import get_response
 
 
-class RecvHandler:
-    maibot_router: Router = None
-
+class MessageHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
-        self.interval = global_config.napcat_server.heartbeat_interval
-        self._interval_checking = False
         self.bot_id_list: Dict[int, bool] = {}
 
-    async def handle_meta_event(self, message: dict) -> None:
-        event_type = message.get("meta_event_type")
-        if event_type == MetaEventType.lifecycle:
-            sub_type = message.get("sub_type")
-            if sub_type == MetaEventType.Lifecycle.connect:
-                self_id = message.get("self_id")
-                self.last_heart_beat = time.time()
-                logger.info(f"Bot {self_id} 连接成功")
-                asyncio.create_task(self.check_heartbeat(self_id))
-        elif event_type == MetaEventType.heartbeat:
-            if message["status"].get("online") and message["status"].get("good"):
-                if not self._interval_checking:
-                    asyncio.create_task(self.check_heartbeat())
-                self.last_heart_beat = time.time()
-                self.interval = message.get("interval") / 1000
-            else:
-                self_id = message.get("self_id")
-                logger.warning(f"Bot {self_id} Napcat 端异常！")
+    async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
+        """设置Napcat连接"""
+        self.server_connection = server_connection
 
-    async def check_heartbeat(self, id: int) -> None:
-        self._interval_checking = True
-        while True:
-            now_time = time.time()
-            if now_time - self.last_heart_beat > self.interval * 2:
-                logger.error(f"Bot {id} 连接已断开，被下线，或者Napcat卡死！")
-                break
-            else:
-                logger.debug("心跳正常")
-            await asyncio.sleep(self.interval)
-
-    async def check_allow_to_chat(self, user_id: int, group_id: Optional[int]) -> bool:
+    async def check_allow_to_chat(
+        self,
+        user_id: int,
+        group_id: Optional[int] = None,
+        ignore_bot: Optional[bool] = False,
+        ignore_global_list: Optional[bool] = False,
+    ) -> bool:
         # sourcery skip: hoist-statement-from-if, merge-else-if-into-elif
         """
         检查是否允许聊天
         Parameters:
             user_id: int: 用户ID
             group_id: int: 群ID
+            ignore_bot: bool: 是否忽略机器人检查
+            ignore_global_list: bool: 是否忽略全局黑名单检查
         Returns:
             bool: 是否允许聊天
         """
-        user_id = str(user_id)
         logger.debug(f"群聊id: {group_id}, 用户id: {user_id}")
-        if global_config.chat.ban_qq_bot and group_id:
+        if global_config.chat.ban_qq_bot and group_id and not ignore_bot:
             logger.debug("开始判断是否为机器人")
-            if not self.bot_id_list:
-                self.bot_id_list = read_bot_id()
-            if user_id in self.bot_id_list:
-                if self.bot_id_list[user_id]:
-                    logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃")
-                    return False
-            else:
-                member_info = await get_member_info(self.server_connection, group_id, user_id)
-                if member_info:
-                    is_bot = member_info.get("is_robot")
-                    if is_bot is None:
-                        logger.warning("无法获取用户是否为机器人，默认为不是但是不进行更新")
+            member_info = await get_member_info(self.server_connection, group_id, user_id)
+            if member_info:
+                is_bot = member_info.get("is_robot")
+                if is_bot is None:
+                    logger.warning("无法获取用户是否为机器人，默认为不是但是不进行更新")
+                else:
+                    if is_bot:
+                        logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃，新机器人加入拦截名单")
+                        self.bot_id_list[user_id] = True
+                        return False
                     else:
-                        if is_bot:
-                            logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃，新机器人加入拦截名单")
-                            self.bot_id_list[user_id] = True
-                            update_bot_id(self.bot_id_list)
-                            return False
-                        else:
-                            self.bot_id_list[user_id] = False
-                            update_bot_id(self.bot_id_list)
-        user_id = int(user_id)
+                        self.bot_id_list[user_id] = False
         logger.debug("开始检查聊天白名单/黑名单")
         if group_id:
             if global_config.chat.group_list_type == "whitelist" and group_id not in global_config.chat.group_list:
@@ -123,7 +88,7 @@ class RecvHandler:
             elif global_config.chat.private_list_type == "blacklist" and user_id in global_config.chat.private_list:
                 logger.warning("私聊在聊天黑名单中，消息被丢弃")
                 return False
-        if user_id in global_config.chat.ban_user_id:
+        if user_id in global_config.chat.ban_user_id and not ignore_global_list:
             logger.warning("用户在全局黑名单中，消息被丢弃")
             return False
         return True
@@ -275,7 +240,7 @@ class RecvHandler:
         )
 
         logger.info("发送到Maibot处理信息")
-        await self.message_process(message_base)
+        await message_send_instance.message_send(message_base)
 
     async def handle_real_message(self, raw_message: dict, in_reply: bool = False) -> List[Seg] | None:
         # sourcery skip: low-code-quality
@@ -343,7 +308,7 @@ class RecvHandler:
                 case RealMessageType.share:
                     logger.warning("暂时不支持链接解析")
                 case RealMessageType.forward:
-                    messages = await self.get_forward_message(sub_message)
+                    messages = await self._get_forward_message(sub_message)
                     if not messages:
                         logger.warning("转发消息内容为空或获取失败")
                         return None
@@ -440,40 +405,6 @@ class RecvHandler:
                 else:
                     return None
 
-    async def get_forward_message(self, raw_message: dict) -> Dict[str, Any] | None:
-        forward_message_data: Dict = raw_message.get("data")
-        if not forward_message_data:
-            logger.warning("转发消息内容为空")
-            return None
-        forward_message_id = forward_message_data.get("id")
-        request_uuid = str(uuid.uuid4())
-        payload = json.dumps(
-            {
-                "action": "get_forward_msg",
-                "params": {"message_id": forward_message_id},
-                "echo": request_uuid,
-            }
-        )
-        try:
-            await self.server_connection.send(payload)
-            response: dict = await get_response(request_uuid)
-        except TimeoutError:
-            logger.error("获取转发消息超时")
-            return None
-        except Exception as e:
-            logger.error(f"获取转发消息失败: {str(e)}")
-            return None
-        logger.debug(
-            f"转发消息原始格式：{json.dumps(response)[:80]}..."
-            if len(json.dumps(response)) > 80
-            else json.dumps(response)
-        )
-        response_data: Dict = response.get("data")
-        if not response_data:
-            logger.warning("转发消息内容为空或获取失败")
-            return None
-        return response_data.get("messages")
-
     async def handle_reply_message(self, raw_message: dict) -> List[Seg] | None:
         # sourcery skip: move-assign-in-block, use-named-expression
         """
@@ -505,156 +436,6 @@ class RecvHandler:
         seg_message += reply_message
         seg_message.append(Seg(type="text", data="]，说："))
         return seg_message
-
-    async def handle_notice(self, raw_message: dict) -> None:
-        notice_type = raw_message.get("notice_type")
-        # message_time: int = raw_message.get("time")
-        message_time: float = time.time()  # 应可乐要求，现在是float了
-
-        group_id = raw_message.get("group_id")
-        user_id = raw_message.get("user_id")
-        target_id = raw_message.get("target_id")
-
-        if not await self.check_allow_to_chat(user_id, group_id):
-            logger.warning("notice消息被丢弃")
-            return None
-
-        handled_message: Seg = None
-
-        match notice_type:
-            case NoticeType.friend_recall:
-                logger.info("好友撤回一条消息")
-                logger.info(f"撤回消息ID：{raw_message.get('message_id')}, 撤回时间：{raw_message.get('time')}")
-                logger.warning("暂时不支持撤回消息处理")
-            case NoticeType.group_recall:
-                logger.info("群内用户撤回一条消息")
-                logger.info(f"撤回消息ID：{raw_message.get('message_id')}, 撤回时间：{raw_message.get('time')}")
-                logger.warning("暂时不支持撤回消息处理")
-            case NoticeType.notify:
-                sub_type = raw_message.get("sub_type")
-                match sub_type:
-                    case NoticeType.Notify.poke:
-                        if global_config.chat.enable_poke:
-                            handled_message: Seg = await self.handle_poke_notify(raw_message)
-                        else:
-                            logger.warning("戳一戳消息被禁用，取消戳一戳处理")
-                    case _:
-                        logger.warning(f"不支持的notify类型: {notice_type}.{sub_type}")
-            case _:
-                logger.warning(f"不支持的notice类型: {notice_type}")
-                return None
-        if not handled_message:
-            logger.warning("notice处理失败或不支持")
-            return None
-
-        source_name: str = None
-        source_cardname: str = None
-        if group_id:
-            member_info: dict = await get_member_info(self.server_connection, group_id, user_id)
-            if member_info:
-                source_name = member_info.get("nickname")
-                source_cardname = member_info.get("card")
-            else:
-                logger.warning("无法获取戳一戳消息发送者的昵称，消息可能会无效")
-                source_name = "QQ用户"
-        else:
-            stranger_info = await get_stranger_info(self.server_connection, user_id)
-            if stranger_info:
-                source_name = stranger_info.get("nickname")
-            else:
-                logger.warning("无法获取戳一戳消息发送者的昵称，消息可能会无效")
-                source_name = "QQ用户"
-
-        user_info: UserInfo = UserInfo(
-            platform=global_config.maibot_server.platform_name,
-            user_id=user_id,
-            user_nickname=source_name,
-            user_cardname=source_cardname,
-        )
-
-        group_info: GroupInfo = None
-        if group_id:
-            fetched_group_info = await get_group_info(self.server_connection, group_id)
-            group_name: str = None
-            if fetched_group_info:
-                group_name = fetched_group_info.get("group_name")
-            else:
-                logger.warning("无法获取戳一戳消息所在群的名称")
-            group_info = GroupInfo(
-                platform=global_config.maibot_server.platform_name,
-                group_id=group_id,
-                group_name=group_name,
-            )
-
-        message_info: BaseMessageInfo = BaseMessageInfo(
-            platform=global_config.maibot_server.platform_name,
-            message_id="notice",
-            time=message_time,
-            user_info=user_info,
-            group_info=group_info,
-            template_info=None,
-            format_info=None,
-            additional_config = {"target_id": target_id}# 在这里塞了一个target_id，方便mmc那边知道被戳的人是谁
-        )
-
-        message_base: MessageBase = MessageBase(
-            message_info=message_info,
-            message_segment=handled_message,
-            raw_message=json.dumps(raw_message),
-        )
-
-        logger.info("发送到Maibot处理通知信息")
-        await self.message_process(message_base)
-
-    async def handle_poke_notify(self, raw_message: dict) -> Seg | None:
-        self_info: dict = await get_self_info(self.server_connection)
-        
-        if not self_info:
-            logger.error("自身信息获取失败")
-            return None
-        self_id = raw_message.get("self_id")
-        target_id = raw_message.get("target_id")
-        group_id = raw_message.get("group_id")
-        user_id = raw_message.get("user_id")
-        target_name: str = None
-        raw_info: list = raw_message.get("raw_info")
-        # 计算Seg
-        if self_id == target_id: # 现在这里应当是专注于处理私聊戳一戳的，也就是说当私聊里，被戳的是另一方时，不会给这个消息。
-            target_name = self_info.get("nickname")
-            user_name = "" # 这样的话应该能保证消息大概是“某某某：戳了戳麦麦”，而不是“某某某：某某某戳了戳麦麦”
-
-        elif self_id == user_id:
-            return None # 这应当让ada不发送麦麦戳别人的消息，因为这个消息已经被mmc的命令记录了，没必要记第二次。
-
-        else:
-            if group_id: # 如果是群聊环境，老实说做这一步判定没啥意义，毕竟私聊是没有其他人之间的戳一戳的，但是感觉可以有这个判定来强限制群聊环境
-                user_info: dict = await get_member_info(
-                    self.server_connection, group_id, user_id
-                )
-                fetched_member_info: dict = await get_member_info(
-                    self.server_connection, group_id, target_id
-                )
-                if user_info:
-                    user_name = user_info.get("nickname")
-                else:
-                    user_name = "QQ用户"
-                if fetched_member_info:
-                    target_name = fetched_member_info.get("nickname")
-                else:
-                    target_name = "QQ用户"
-            else:
-                return None
-        try:
-            first_txt = raw_info[2].get("txt", "戳了戳")
-        except Exception as e:
-            logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
-            first_txt = "戳了戳"
-
-        seg_data: Seg = Seg(
-            type="text",
-            data=f"{user_name}{first_txt}{target_name}（这是QQ的一个功能，用于提及某人，但没那么明显）",
-        )
-        return seg_data
 
     async def handle_forward_message(self, message_list: list) -> Seg | None:
         """
@@ -814,15 +595,39 @@ class RecvHandler:
                 seg_list.append(full_seg_data)
         return Seg(type="seglist", data=seg_list), image_count
 
-    async def message_process(self, message_base: MessageBase) -> None:
-        try:
-            send_status = await self.maibot_router.send_message(message_base)
-            if not send_status:
-                raise RuntimeError("发送消息失败，可能是路由未正确配置或连接异常")
-        except Exception as e:
-            logger.error(f"发送消息失败: {str(e)}")
-            logger.error("请检查与MaiBot之间的连接")
+    async def _get_forward_message(self, raw_message: dict) -> Dict[str, Any] | None:
+        forward_message_data: Dict = raw_message.get("data")
+        if not forward_message_data:
+            logger.warning("转发消息内容为空")
             return None
+        forward_message_id = forward_message_data.get("id")
+        request_uuid = str(uuid.uuid4())
+        payload = json.dumps(
+            {
+                "action": "get_forward_msg",
+                "params": {"message_id": forward_message_id},
+                "echo": request_uuid,
+            }
+        )
+        try:
+            await self.server_connection.send(payload)
+            response: dict = await get_response(request_uuid)
+        except TimeoutError:
+            logger.error("获取转发消息超时")
+            return None
+        except Exception as e:
+            logger.error(f"获取转发消息失败: {str(e)}")
+            return None
+        logger.debug(
+            f"转发消息原始格式：{json.dumps(response)[:80]}..."
+            if len(json.dumps(response)) > 80
+            else json.dumps(response)
+        )
+        response_data: Dict = response.get("data")
+        if not response_data:
+            logger.warning("转发消息内容为空或获取失败")
+            return None
+        return response_data.get("messages")
 
 
-recv_handler = RecvHandler()
+message_handler = MessageHandler()

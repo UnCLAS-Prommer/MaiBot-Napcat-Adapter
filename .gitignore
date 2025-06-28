@@ -272,4 +272,6 @@ $RECYCLE.BIN/
 config.toml
 config.toml.back
 test
-data/qq_bot.json
+data/NapcatAdapter.db
+data/NapcatAdapter.db-shm
+data/NapcatAdapter.db-wal

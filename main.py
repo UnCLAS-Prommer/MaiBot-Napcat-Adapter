@@ -3,7 +3,10 @@ import sys
 import json
 import websockets as Server
 from src.logger import logger
-from src.recv_handler import recv_handler
+from src.recv_handler.message_handler import message_handler
+from src.recv_handler.meta_event_handler import meta_event_handler
+from src.recv_handler.notice_handler import notice_handler
+from src.recv_handler.message_sending import message_send_instance
 from src.send_handler import send_handler
 from src.config import global_config
 from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
@@ -13,8 +16,9 @@ message_queue = asyncio.Queue()
 
 
 async def message_recv(server_connection: Server.ServerConnection):
-    recv_handler.server_connection = server_connection
-    send_handler.server_connection = server_connection
+    await message_handler.set_server_connection(server_connection)
+    asyncio.create_task(notice_handler.set_server_connection(server_connection))
+    await send_handler.set_server_connection(server_connection)
     async for raw_message in server_connection:
         logger.debug(
             f"{raw_message[:100]}..."
@@ -34,11 +38,11 @@ async def message_process():
         message = await message_queue.get()
         post_type = message.get("post_type")
         if post_type == "message":
-            await recv_handler.handle_raw_message(message)
+            await message_handler.handle_raw_message(message)
         elif post_type == "meta_event":
-            await recv_handler.handle_meta_event(message)
+            await meta_event_handler.handle_meta_event(message)
         elif post_type == "notice":
-            await recv_handler.handle_notice(message)
+            await notice_handler.handle_notice(message)
         else:
             logger.warning(f"未知的post_type: {post_type}")
         message_queue.task_done()
@@ -46,7 +50,7 @@ async def message_process():
 
 
 async def main():
-    recv_handler.maibot_router = router
+    message_send_instance.maibot_router = router
     _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process(), check_timeout_response())
 
 

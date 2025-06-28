@@ -13,6 +13,8 @@ Seg.data: Dict[str, Any] = {
 }
 ```
 其中，群聊ID将会通过Group_Info.group_id自动获取。
+
+**当`duration`为 0 时相当于解除禁言。**
 ## 群聊全体禁言
 ```python
 Seg.data: Dict[str, Any] = {

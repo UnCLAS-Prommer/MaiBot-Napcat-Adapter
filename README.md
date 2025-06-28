@@ -79,3 +79,5 @@ sequenceDiagram
 
   # 特别鸣谢
   特别感谢[@Maple127667](https://github.com/Maple127667)对本项目代码思路的支持
+
+  以及[@墨梓柒](https://github.com/DrSmoothl)对部分代码想法的支持
