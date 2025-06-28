@@ -357,7 +357,7 @@ class SendHandler:
                 "user_id": user_id,
             },
         )
-    
+
     def delete_msg_command(self, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
         """处理撤回消息命令
 
@@ -371,13 +371,15 @@ class SendHandler:
             message_id = int(args["message_id"])
             if message_id <= 0:
                 raise ValueError("消息ID无效")
+        except KeyError:
+            raise ValueError("缺少必需参数: message_id") from None
         except (ValueError, TypeError) as e:
-            raise ValueError(f"消息ID无效: {args['message_id']} - {str(e)}")
-        
+            raise ValueError(f"消息ID无效: {args['message_id']} - {str(e)}") from None
+
         return (
             CommandType.DELETE_MSG.value,
             {
-                "message_id": message_id
+                "message_id": message_id,
             },
         )
 

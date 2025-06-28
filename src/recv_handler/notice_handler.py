@@ -152,7 +152,7 @@ class NoticeHandler:
             group_info=group_info,
             template_info=None,
             format_info=None,
-            additional_config = {"target_id": target_id}# 在这里塞了一个target_id，方便mmc那边知道被戳的人是谁
+            additional_config={"target_id": target_id},  # 在这里塞了一个target_id，方便mmc那边知道被戳的人是谁
         )
 
         message_base: MessageBase = MessageBase(
@@ -167,54 +167,45 @@ class NoticeHandler:
             logger.info("发送到Maibot处理通知信息")
             await message_send_instance.message_send(message_base)
 
-    async def handle_poke_notify(self, raw_message: dict, group_id: int, user_id: int) -> Tuple[Seg | None, UserInfo | None]:
+    async def handle_poke_notify(
+        self, raw_message: dict, group_id: int, user_id: int
+    ) -> Tuple[Seg | None, UserInfo | None]:
         self_info: dict = await get_self_info(self.server_connection)
 
         if not self_info:
             logger.error("自身信息获取失败")
             return None, None
-        
+
         self_id = raw_message.get("self_id")
         target_id = raw_message.get("target_id")
         target_name: str = None
         raw_info: list = raw_message.get("raw_info")
 
         if group_id:
-            user_qq_info: dict = await get_member_info(
-                    self.server_connection, group_id, user_id
-                )
-            if user_qq_info:
-                user_name = user_qq_info.get("nickname")
-                user_cardname = user_qq_info.get("card")
-            else:
-                user_name = "QQ用户"
-                user_cardname = "QQ用户"
-                logger.info("无法获取戳一戳对方的用户昵称")
+            user_qq_info: dict = await get_member_info(self.server_connection, group_id, user_id)
         else:
-            user_qq_info: dict = await get_stranger_info(
-                    self.server_connection, user_id
-                )
-            if user_qq_info:
-                user_name = user_qq_info.get("nickname")
-                user_cardname = user_qq_info.get("card")
-            else:
-                user_name = "QQ用户"
-                user_cardname = "QQ用户"
-                logger.info("无法获取戳一戳对方的用户昵称")
+            user_qq_info: dict = await get_stranger_info(self.server_connection, user_id)
+        if user_qq_info:
+            user_name = user_qq_info.get("nickname")
+            user_cardname = user_qq_info.get("card")
+        else:
+            user_name = "QQ用户"
+            user_cardname = "QQ用户"
+            logger.info("无法获取戳一戳对方的用户昵称")
 
         # 计算Seg
-        if self_id == target_id: # 现在这里应当是专注于处理私聊戳一戳的，也就是说当私聊里，被戳的是另一方时，不会给这个消息。
+        if self_id == target_id:
             display_name = ""
             target_name = self_info.get("nickname")
 
         elif self_id == user_id:
-            return None, None # 这应当让ada不发送麦麦戳别人的消息，因为这个消息已经被mmc的命令记录了，没必要记第二次。
+            # 让ada不发送麦麦戳别人的消息
+            return None, None
 
         else:
-            if group_id: # 如果是群聊环境，老实说做这一步判定没啥意义，毕竟私聊是没有其他人之间的戳一戳的，但是感觉可以有这个判定来强限制群聊环境
-                fetched_member_info: dict = await get_member_info(
-                    self.server_connection, group_id, target_id
-                )
+            # 老实说这一步判定没啥意义，毕竟私聊是没有其他人之间的戳一戳，但是感觉可以有这个判定来强限制群聊环境
+            if group_id:
+                fetched_member_info: dict = await get_member_info(self.server_connection, group_id, target_id)
                 if fetched_member_info:
                     target_name = fetched_member_info.get("nickname")
                 else:
@@ -223,12 +214,14 @@ class NoticeHandler:
                 display_name = user_name
             else:
                 return None, None
+
+        first_txt: str = "戳了戳"
+        second_txt: str = ""
         try:
             first_txt = raw_info[2].get("txt", "戳了戳")
             second_txt = raw_info[4].get("txt", "")
         except Exception as e:
             logger.warning(f"解析戳一戳消息失败: {str(e)}，将使用默认文本")
-            first_txt = "戳了戳"
 
         user_info: UserInfo = UserInfo(
             platform=global_config.maibot_server.platform_name,
