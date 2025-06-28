@@ -81,11 +81,10 @@ class SendHandler:
         )
         if response.get("status") == "ok":
             logger.info("消息发送成功")
+            qq_message_id = response.get("data", {}).get("message_id")
+            await self.message_sent_back(raw_message_base, qq_message_id)
         else:
             logger.warning(f"消息发送失败，napcat返回：{str(response)}")
-
-        qq_message_id = response.get("data", {}).get("message_id")
-        await self.message_sent_back(raw_message_base, qq_message_id)
 
     async def send_command(self, raw_message_base: MessageBase) -> None:
         """
@@ -393,7 +392,7 @@ class SendHandler:
             return {"status": "error", "message": str(e)}
         return response
 
-    async def message_sent_back(self, message_base: MessageBase, qq_message_id: str):
+    async def message_sent_back(self, message_base: MessageBase, qq_message_id: str) -> None:
         # 修改 additional_config，添加 echo 字段
         if message_base.message_info.additional_config is None:
             message_base.message_info.additional_config = {}
