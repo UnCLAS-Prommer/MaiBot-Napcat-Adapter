@@ -36,14 +36,14 @@ class MessageHandler:
         self.server_connection: Server.ServerConnection = None
         self.bot_id_list: Dict[int, bool] = {}
 
-    def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
+    async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
         self.server_connection = server_connection
 
     async def check_allow_to_chat(
         self,
         user_id: int,
-        group_id: Optional[int],
+        group_id: Optional[int] = None,
         ignore_bot: Optional[bool] = False,
         ignore_global_list: Optional[bool] = False,
     ) -> bool:

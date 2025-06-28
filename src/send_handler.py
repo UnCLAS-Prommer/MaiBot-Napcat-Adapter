@@ -21,7 +21,7 @@ class SendHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
 
-    def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
+    async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
         self.server_connection = server_connection
 

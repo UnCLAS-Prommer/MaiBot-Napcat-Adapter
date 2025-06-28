@@ -1,5 +1,6 @@
 import os
 from typing import Optional, List
+from dataclasses import dataclass
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from src.logger import logger
@@ -13,7 +14,18 @@ from src.logger import logger
 """
 
 
-class BanUser(SQLModel, table=True):
+@dataclass
+class BanUser:
+    """
+    程序处理使用的实例
+    """
+
+    user_id: int
+    group_id: int
+    lift_time: Optional[int] = Field(default=-1)
+
+
+class DB_BanUser(SQLModel, table=True):
     """
     表示数据库中的用户禁言记录。
     使用双重主键
@@ -24,7 +36,7 @@ class BanUser(SQLModel, table=True):
     lift_time: Optional[int]  # 禁言解除的时间（时间戳）
 
 
-def is_identical(self, obj1: BanUser, obj2: BanUser) -> bool:
+def is_identical(obj1: BanUser, obj2: BanUser) -> bool:
     """
     检查两个 BanUser 对象是否相同。
     """
@@ -51,15 +63,16 @@ class DatabaseManager:
         logger.success("数据库和表已创建或已存在")
 
     def update_ban_record(self, ban_list: List[BanUser]) -> None:
+        # sourcery skip: class-extract-method
         """
         更新禁言列表到数据库。
         支持在不存在时创建新记录，对于多余的项目自动删除。
         """
         with Session(self.engine) as session:
-            all_records = session.exec(select(BanUser)).all()
+            all_records = session.exec(select(DB_BanUser)).all()
             for ban_user in ban_list:
-                statement = select(BanUser).where(
-                    BanUser.user_id == ban_user.user_id, BanUser.group_id == ban_user.group_id
+                statement = select(DB_BanUser).where(
+                    DB_BanUser.user_id == ban_user.user_id, DB_BanUser.group_id == ban_user.group_id
                 )
                 if existing_record := session.exec(statement).first():
                     if existing_record.lift_time == ban_user.lift_time:
@@ -71,13 +84,24 @@ class DatabaseManager:
                     logger.debug(f"更新禁言记录: {existing_record}")
                 else:
                     # 创建新记录
-                    session.add(ban_user)
+                    db_record = DB_BanUser(
+                        user_id=ban_user.user_id, group_id=ban_user.group_id, lift_time=ban_user.lift_time
+                    )
+                    session.add(db_record)
                     logger.debug(f"创建新禁言记录: {ban_user}")
             # 删除不在 ban_list 中的记录
-            for record in all_records:
+            for db_record in all_records:
+                record = BanUser(user_id=db_record.user_id, group_id=db_record.group_id, lift_time=db_record.lift_time)
                 if not any(is_identical(record, ban_user) for ban_user in ban_list):
-                    session.delete(record)
-                    logger.debug(f"删除禁言记录: {record}")
+                    statement = select(DB_BanUser).where(
+                        DB_BanUser.user_id == record.user_id, DB_BanUser.group_id == record.group_id
+                    )
+                    if ban_record := session.exec(statement).first():
+                        session.delete(ban_record)
+                        session.commit()
+                        logger.debug(f"删除禁言记录: {ban_record}")
+                    else:
+                        logger.info(f"未找到禁言记录: {ban_record}")
 
             session.commit()
             logger.info("禁言记录已更新")
@@ -87,8 +111,9 @@ class DatabaseManager:
         读取所有禁言记录。
         """
         with Session(self.engine) as session:
-            statement = select(BanUser)
-            return session.exec(statement).all()
+            statement = select(DB_BanUser)
+            records = session.exec(statement).all()
+            return [BanUser(user_id=item.user_id, group_id=item.group_id, lift_time=item.lift_time) for item in records]
 
     def create_ban_record(self, ban_record: BanUser) -> None:
         """
@@ -97,7 +122,10 @@ class DatabaseManager:
         其同时还是简化版的更新方式。
         """
         with Session(self.engine) as session:
-            session.add(ban_record)
+            db_record = DB_BanUser(
+                user_id=ban_record.user_id, group_id=ban_record.group_id, lift_time=ban_record.lift_time
+            )
+            session.add(db_record)
             session.commit()
             logger.debug(f"创建/更新禁言记录: {ban_record}")
 
@@ -109,7 +137,7 @@ class DatabaseManager:
         user_id = ban_record.user_id
         group_id = ban_record.group_id
         with Session(self.engine) as session:
-            statement = select(BanUser).where(BanUser.user_id == user_id, BanUser.group_id == group_id)
+            statement = select(DB_BanUser).where(DB_BanUser.user_id == user_id, DB_BanUser.group_id == group_id)
             if ban_record := session.exec(statement).first():
                 session.delete(ban_record)
                 session.commit()

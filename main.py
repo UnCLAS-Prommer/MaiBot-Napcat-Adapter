@@ -16,9 +16,9 @@ message_queue = asyncio.Queue()
 
 
 async def message_recv(server_connection: Server.ServerConnection):
-    message_handler.set_server_connection(server_connection)
-    notice_handler.set_server_connection(server_connection)
-    send_handler.set_server_connection(server_connection)
+    await message_handler.set_server_connection(server_connection)
+    asyncio.create_task(notice_handler.set_server_connection(server_connection))
+    await send_handler.set_server_connection(server_connection)
     async for raw_message in server_connection:
         logger.debug(
             f"{raw_message[:100]}..."

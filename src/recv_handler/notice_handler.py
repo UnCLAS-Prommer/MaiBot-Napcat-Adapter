@@ -35,6 +35,8 @@ class NoticeHandler:
         """设置Napcat连接"""
         self.server_connection = server_connection
 
+        while self.server_connection.state != Server.State.OPEN:
+            await asyncio.sleep(0.5)
         self.banned_list, self.lifted_list = await read_ban_list(self.server_connection)
 
         asyncio.create_task(self.auto_lift_detect())
@@ -59,7 +61,7 @@ class NoticeHandler:
         self.banned_list.append(ban_record)
         db_manager.create_ban_record(ban_record)  # 添加到数据库
 
-    def _lift_operation(self, group_id: int, user_id: Optional[int]) -> None:
+    def _lift_operation(self, group_id: int, user_id: Optional[int] = None) -> None:
         """
         从self.lifted_group_list中移除已经解除全体禁言的群
         """
@@ -77,12 +79,9 @@ class NoticeHandler:
         group_id = raw_message.get("group_id")
         user_id = raw_message.get("user_id")
 
-        # if not await self.check_allow_to_chat(user_id, group_id):
-        #     logger.warning("notice消息被丢弃")
-        #     return None
-
         handled_message: Seg = None
         user_info: UserInfo = None
+        system_notice: bool = False
 
         match notice_type:
             case NoticeType.friend_recall:
@@ -110,15 +109,17 @@ class NoticeHandler:
                 sub_type = raw_message.get("sub_type")
                 match sub_type:
                     case NoticeType.GroupBan.ban:
-                        if await message_handler.check_allow_to_chat(user_id, group_id, True, False):
+                        if not await message_handler.check_allow_to_chat(user_id, group_id, True, False):
                             return None
                         logger.info("处理群禁言")
                         handled_message, user_info = await self.handle_ban_notify(raw_message, group_id)
+                        system_notice = True
                     case NoticeType.GroupBan.lift_ban:
-                        if await message_handler.check_allow_to_chat(user_id, group_id, True, False):
+                        if not await message_handler.check_allow_to_chat(user_id, group_id, True, False):
                             return None
                         logger.info("处理解除群禁言")
                         handled_message, user_info = await self.handle_lift_ban_notify(raw_message, group_id)
+                        system_notice = True
                     case _:
                         logger.warning(f"不支持的group_ban类型: {notice_type}.{sub_type}")
             case _:
@@ -158,8 +159,11 @@ class NoticeHandler:
             raw_message=json.dumps(raw_message),
         )
 
-        logger.info("发送到Maibot处理通知信息")
-        await message_send_instance.message_send(message_base)
+        if system_notice:
+            await self.put_notice(message_base)
+        else:
+            logger.info("发送到Maibot处理通知信息")
+            await message_send_instance.message_send(message_base)
 
     async def handle_poke_notify(self, raw_message: dict, group_id: int, user_id: int) -> Tuple[Seg | None, UserInfo]:
         self_info: dict = await get_self_info(self.server_connection)
@@ -355,6 +359,15 @@ class NoticeHandler:
         )
         return seg_data, operator_info
 
+    async def put_notice(self, message_base: MessageBase) -> None:
+        """
+        将处理后的通知消息放入通知队列
+        """
+        if notice_queue.full() or unsuccessful_notice_queue.full():
+            logger.warning("通知队列已满，可能是多次发送失败，消息丢弃")
+        else:
+            await notice_queue.put(message_base)
+
     async def handle_natural_lift(self) -> None:
         while True:
             if len(self.lifted_list) != 0:
@@ -402,11 +415,8 @@ class NoticeHandler:
                         }
                     ),
                 )
-                if notice_queue.full() or unsuccessful_notice_queue.full():
-                    logger.warning("通知队列已满，可能是多次发送失败，消息丢弃")
-                else:
-                    await notice_queue.put(message_base)
 
+                await self.put_notice(message_base)
                 await asyncio.sleep(0.5)  # 确保队列处理间隔
             else:
                 await asyncio.sleep(5)  # 每5秒检查一次
@@ -449,6 +459,9 @@ class NoticeHandler:
 
     async def auto_lift_detect(self) -> None:
         while True:
+            if len(self.banned_list) == 0:
+                await asyncio.sleep(5)
+                continue
             for ban_record in self.banned_list:
                 if ban_record.user_id == 0 or ban_record.lift_time == -1:
                     continue
@@ -457,7 +470,7 @@ class NoticeHandler:
                     logger.info(f"检测到用户 {ban_record.user_id} 在群 {ban_record.group_id} 的禁言已解除")
                     self.lifted_list.append(ban_record)
                     self.banned_list.remove(ban_record)
-            asyncio.sleep(5)
+            await asyncio.sleep(5)
 
     async def send_notice(self) -> None:
         """
@@ -475,7 +488,7 @@ class NoticeHandler:
                 except Exception as e:
                     logger.error(f"发送通知消息失败: {str(e)}")
                     await unsuccessful_notice_queue.put(to_be_send)
-                asyncio.sleep(0.2)
+                await asyncio.sleep(1)
                 continue
             to_be_send: MessageBase = await notice_queue.get()
             try:
