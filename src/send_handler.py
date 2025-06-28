@@ -392,25 +392,20 @@ class SendHandler:
             logger.error(f"发送消息失败: {e}")
             return {"status": "error", "message": str(e)}
         return response
-    
+
     async def message_sent_back(self, message_base: MessageBase, qq_message_id: str):
         # 修改 additional_config，添加 echo 字段
         if message_base.message_info.additional_config is None:
             message_base.message_info.additional_config = {}
-        
+
         message_base.message_info.additional_config["echo"] = True
-        
+
         # 获取原始的 mmc_message_id
         mmc_message_id = message_base.message_info.message_id
-        
+
         # 修改 message_segment 为 notify 类型
         message_base.message_segment = Seg(
-            type="notify",
-            data={
-                "sub_type": "echo",
-                "echo": mmc_message_id,
-                "actual_id": qq_message_id
-            }
+            type="notify", data={"sub_type": "echo", "echo": mmc_message_id, "actual_id": qq_message_id}
         )
         await message_send_instance.message_send(message_base)
         logger.debug("已回送消息ID")
