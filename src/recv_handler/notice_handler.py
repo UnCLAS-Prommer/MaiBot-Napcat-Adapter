@@ -205,7 +205,7 @@ class NoticeHandler:
         if self_id == target_id:
             target_name = self_info.get("nickname")
         else:
-            return None
+            return None, None
         try:
             first_txt = raw_info[2].get("txt", "戳了戳")
             second_txt = raw_info[4].get("txt", "")
