@@ -177,16 +177,28 @@ class NoticeHandler:
         target_name: str = None
         raw_info: list = raw_message.get("raw_info")
 
-        user_qq_info: dict = await get_member_info(
+        if group_id:
+            user_qq_info: dict = await get_member_info(
                     self.server_connection, group_id, user_id
                 )
-        if user_qq_info:
-            user_name = user_qq_info.get("nickname")
-            user_cardname = user_qq_info.get("card")
+            if user_qq_info:
+                user_name = user_qq_info.get("nickname")
+                user_cardname = user_qq_info.get("card")
+            else:
+                user_name = "QQ用户"
+                user_cardname = "QQ用户"
+                logger.info("无法获取戳一戳对方的用户昵称")
         else:
-            user_name = "QQ用户"
-            user_cardname = "QQ用户"
-            logger.info("无法获取戳一戳对方的用户昵称")
+            user_qq_info: dict = await get_stranger_info(
+                    self.server_connection, user_id
+                )
+            if user_qq_info:
+                user_name = user_qq_info.get("nickname")
+                user_cardname = user_qq_info.get("card")
+            else:
+                user_name = "QQ用户"
+                user_cardname = "QQ用户"
+                logger.info("无法获取戳一戳对方的用户昵称")
 
         # 计算Seg
         if self_id == target_id: # 现在这里应当是专注于处理私聊戳一戳的，也就是说当私聊里，被戳的是另一方时，不会给这个消息。
