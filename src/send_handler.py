@@ -15,6 +15,7 @@ from .config import global_config
 from .response_pool import get_response
 from .logger import logger
 from .utils import get_image_format, convert_image_to_gif
+from .recv_handler.message_sending import message_send_instance
 
 
 class SendHandler:
@@ -48,7 +49,7 @@ class SendHandler:
         id_name: str = None
         processed_message: list = []
         try:
-            processed_message = await self.handle_seg_recursive(message_segment)
+            processed_message, seg_type = await self.handle_seg_recursive(message_segment)
         except Exception as e:
             logger.error(f"处理消息时发生错误: {e}")
             return
@@ -82,6 +83,13 @@ class SendHandler:
             logger.info("消息发送成功")
         else:
             logger.warning(f"消息发送失败，napcat返回：{str(response)}")
+
+        qq_message_id = response.get("data", {}).get("message_id")
+
+        if seg_type in {"text","image","emoji","reply","voice","voiceurl","music"}:
+            await self.message_sent_back(raw_message_base, qq_message_id)
+        else:
+            logger.debug("消息类型不支持回调更新数据库")
 
     async def send_command(self, raw_message_base: MessageBase) -> None:
         """
@@ -128,19 +136,19 @@ class SendHandler:
         else:
             return 1
 
-    async def handle_seg_recursive(self, seg_data: Seg) -> list:
+    async def handle_seg_recursive(self, seg_data: Seg) -> tuple[list, str]:
         payload: list = []
         if seg_data.type == "seglist":
             # level = self.get_level(seg_data)  # 给以后可能的多层嵌套做准备，此处不使用
             if not seg_data.data:
                 return []
             for seg in seg_data.data:
-                payload = self.process_message_by_type(seg, payload)
+                payload, seg_type = self.process_message_by_type(seg, payload)
         else:
-            payload = self.process_message_by_type(seg_data, payload)
-        return payload
+            payload, seg_type = self.process_message_by_type(seg_data, payload)
+        return payload, seg_type
 
-    def process_message_by_type(self, seg: Seg, payload: list) -> list:
+    def process_message_by_type(self, seg: Seg, payload: list) -> tuple[list, str]:
         # sourcery skip: reintroduce-else, swap-if-else-branches, use-named-expression
         new_payload = payload
         if seg.type == "reply":
@@ -170,7 +178,7 @@ class SendHandler:
         elif seg.type == "music":
             song_id = seg.data
             new_payload = self.build_payload(payload, self.handle_music_message(song_id), False)
-        return new_payload
+        return new_payload, seg.type
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
         # sourcery skip: for-append-to-extend, merge-list-append, simplify-generator
@@ -363,8 +371,6 @@ class SendHandler:
             message_id = int(args["message_id"])
             if message_id <= 0:
                 raise ValueError("消息ID无效")
-        except KeyError:
-            raise ValueError("缺少必需参数: message_id")
         except (ValueError, TypeError) as e:
             raise ValueError(f"消息ID无效: {args['message_id']} - {str(e)}")
         
@@ -388,6 +394,29 @@ class SendHandler:
             logger.error(f"发送消息失败: {e}")
             return {"status": "error", "message": str(e)}
         return response
+    
+    async def message_sent_back(self, message_base: MessageBase, qq_message_id: str):
+        # 修改 additional_config，添加 echo 字段
+        if message_base.message_info.additional_config is None:
+            message_base.message_info.additional_config = {}
+        
+        message_base.message_info.additional_config["echo"] = True
+        
+        # 获取原始的 mmc_message_id
+        mmc_message_id = message_base.message_info.message_id
+        
+        # 修改 message_segment 为 notify 类型
+        message_base.message_segment = Seg(
+            type="notify",
+            data={
+                "sub_type": "echo",
+                "echo": mmc_message_id,
+                "actual_id": qq_message_id
+            }
+        )
+        await message_send_instance.message_send(message_base)
+        logger.debug("已回送消息ID")
+        return
 
 
 send_handler = SendHandler()
