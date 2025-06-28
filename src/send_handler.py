@@ -363,6 +363,8 @@ class SendHandler:
             message_id = int(args["message_id"])
             if message_id <= 0:
                 raise ValueError("消息ID无效")
+        except KeyError:
+            raise ValueError("缺少必需参数: message_id")
         except (ValueError, TypeError) as e:
             raise ValueError(f"消息ID无效: {args['message_id']} - {str(e)}")
         

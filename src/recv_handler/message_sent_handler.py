@@ -25,7 +25,6 @@ from maim_message import (
 class MessageSentHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
-        self.bot_id_list: Dict[int, bool] = {}
 
     async def set_server_connection(self, server_connection: Server.ServerConnection) -> None:
         """设置Napcat连接"""
