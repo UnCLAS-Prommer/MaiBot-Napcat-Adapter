@@ -72,7 +72,7 @@ class RecvHandler:
                 logger.debug("心跳正常")
             await asyncio.sleep(self.interval)
 
-    async def check_allow_to_chat(self, user_id: int, group_id: Optional[int]) -> bool:
+    async def check_allow_to_chat(self, user_id: int, group_id: Optional[int] = None) -> bool:
         # sourcery skip: hoist-statement-from-if, merge-else-if-into-elif
         """
         检查是否允许聊天
