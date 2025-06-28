@@ -6,6 +6,7 @@ from src.logger import logger
 from src.recv_handler.message_handler import message_handler
 from src.recv_handler.meta_event_handler import meta_event_handler
 from src.recv_handler.notice_handler import notice_handler
+from src.recv_handler.message_sent_handler import message_sent_handler
 from src.recv_handler.message_sending import message_send_instance
 from src.send_handler import send_handler
 from src.config import global_config
@@ -27,7 +28,7 @@ async def message_recv(server_connection: Server.ServerConnection):
         )
         decoded_raw_message: dict = json.loads(raw_message)
         post_type = decoded_raw_message.get("post_type")
-        if post_type in ["meta_event", "message", "notice"]:
+        if post_type in ["meta_event", "message", "notice","message_sent"]:
             await message_queue.put(decoded_raw_message)
         elif post_type is None:
             await put_response(decoded_raw_message)
@@ -43,6 +44,8 @@ async def message_process():
             await meta_event_handler.handle_meta_event(message)
         elif post_type == "notice":
             await notice_handler.handle_notice(message)
+        elif post_type == "message_sent":
+            await message_sent_handler.handle_sent_message(message)
         else:
             logger.warning(f"未知的post_type: {post_type}")
         message_queue.task_done()
