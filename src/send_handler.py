@@ -103,6 +103,8 @@ class SendHandler:
                     command, args_dict = self.handle_kick_command(seg_data.get("args"), group_info)
                 case CommandType.SEND_POKE.name:
                     command, args_dict = self.handle_poke_command(seg_data.get("args"), group_info)
+                case CommandType.DELETE_MSG.name:
+                    command, args_dict = self.delete_msg_command(seg_data.get("args"))
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
@@ -345,6 +347,31 @@ class SendHandler:
             {
                 "group_id": group_id,
                 "user_id": user_id,
+            },
+        )
+    
+    def delete_msg_command(self, args: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """处理撤回消息命令
+
+        Args:
+            args (Dict[str, Any]): 参数字典
+
+        Returns:
+            Tuple[CommandType, Dict[str, Any]]
+        """
+        try:
+            message_id = int(args["message_id"])
+            if message_id <= 0:
+                raise ValueError("消息ID无效")
+        except KeyError:
+            raise ValueError("缺少必需参数: message_id")
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"消息ID无效: {args['message_id']} - {str(e)}")
+        
+        return (
+            CommandType.DELETE_MSG.value,
+            {
+                "message_id": message_id
             },
         )
 
