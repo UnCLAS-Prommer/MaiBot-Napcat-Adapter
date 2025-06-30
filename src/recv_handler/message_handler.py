@@ -4,12 +4,13 @@ from src.utils import (
     get_group_info,
     get_member_info,
     get_image_base64,
+    get_record_detail,
     get_self_info,
     get_message_detail,
 )
 from .qq_emoji_list import qq_face
 from .message_sending import message_send_instance
-from . import RealMessageType, MessageType
+from . import RealMessageType, MessageType, ACCEPT_FORMAT
 
 import time
 import json
@@ -108,8 +109,8 @@ class MessageHandler:
 
         template_info: TemplateInfo = None  # 模板信息，暂时为空，等待启用
         format_info: FormatInfo = FormatInfo(
-            content_format=["text", "image", "emoji"],
-            accept_format=["text", "image", "emoji", "reply", "voice", "command"],
+            content_format=["text", "image", "emoji", "voice"],
+            accept_format=ACCEPT_FORMAT,
         )  # 格式化信息
         if message_type == MessageType.private:
             sub_type = raw_message.get("sub_type")
@@ -285,7 +286,13 @@ class MessageHandler:
                     else:
                         logger.warning("image处理失败")
                 case RealMessageType.record:
-                    logger.warning("不支持语音解析")
+                    ret_seg = await self.handle_record_message(sub_message)
+                    if ret_seg:
+                        seg_message.clear()
+                        seg_message.append(ret_seg)
+                        break  # 使得消息只有record消息
+                    else:
+                        logger.warning("record处理失败或不支持")
                 case RealMessageType.video:
                     logger.warning("不支持视频解析")
                 case RealMessageType.at:
@@ -404,6 +411,27 @@ class MessageHandler:
                     return Seg(type="text", data=f"@<{member_info.get('nickname')}:{member_info.get('user_id')}>")
                 else:
                     return None
+
+    async def handle_record_message(self, raw_message: dict) -> Seg | None:
+        """
+        处理语音消息
+        Parameters:
+            raw_message: dict: 原始消息
+        Returns:
+            seg_data: Seg: 处理后的消息段
+        """
+        message_data: dict = raw_message.get("data")
+        file: str = message_data.get("file")
+        try:
+            record_detail = await get_record_detail(self.server_connection, file)
+            audio_base64: str = record_detail.get("base64")
+        except Exception as e:
+            logger.error(f"语音消息处理失败: {str(e)}")
+            return None
+        if not audio_base64:
+            logger.error("语音消息处理失败，未获取到音频数据")
+            return None
+        return Seg(type="voice", data=audio_base64)
 
     async def handle_reply_message(self, raw_message: dict) -> List[Seg] | None:
         # sourcery skip: move-assign-in-block, use-named-expression

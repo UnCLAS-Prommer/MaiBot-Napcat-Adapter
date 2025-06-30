@@ -20,11 +20,7 @@ async def message_recv(server_connection: Server.ServerConnection):
     asyncio.create_task(notice_handler.set_server_connection(server_connection))
     await send_handler.set_server_connection(server_connection)
     async for raw_message in server_connection:
-        logger.debug(
-            f"{raw_message[:100]}..."
-            if (len(raw_message) > 100 and global_config.debug.level != "DEBUG")
-            else raw_message
-        )
+        logger.debug(f"{raw_message[:1500]}..." if (len(raw_message) > 1500) else raw_message)
         decoded_raw_message: dict = json.loads(raw_message)
         post_type = decoded_raw_message.get("post_type")
         if post_type in ["meta_event", "message", "notice"]:

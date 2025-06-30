@@ -11,7 +11,7 @@ from .logger import logger
 from .response_pool import get_response
 
 from PIL import Image
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 
 
 class SSLAdapter(urllib3.PoolManager):
@@ -216,6 +216,40 @@ async def get_message_detail(websocket: Server.ServerConnection, message_id: Uni
         logger.error(f"获取消息详情失败: {e}")
         return None
     logger.debug(response)
+    return response.get("data")
+
+
+async def get_record_detail(
+    websocket: Server.ServerConnection, file: str, file_id: Optional[str] = None
+) -> dict | None:
+    """
+    获取语音消息内容
+    Parameters:
+        websocket: WebSocket连接对象
+        file: 文件名
+        file_id: 文件ID
+    Returns:
+        dict: 返回的语音消息详情
+    """
+    logger.debug("获取语音消息详情中")
+    request_uuid = str(uuid.uuid4())
+    payload = json.dumps(
+        {
+            "action": "get_record",
+            "params": {"file": file, "file_id": file_id, "out_format": "wav"},
+            "echo": request_uuid,
+        }
+    )
+    try:
+        await websocket.send(payload)
+        response: dict = await get_response(request_uuid)
+    except TimeoutError:
+        logger.error(f"获取语音消息详情超时，文件: {file}, 文件ID: {file_id}")
+        return None
+    except Exception as e:
+        logger.error(f"获取语音消息详情失败: {e}")
+        return None
+    logger.debug(f"{str(response)[:200]}...")  # 防止语音的超长base64编码导致日志过长
     return response.get("data")
 
 

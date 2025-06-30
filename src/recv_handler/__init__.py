@@ -82,3 +82,6 @@ class CommandType(Enum):
 
     def __str__(self) -> str:
         return self.value
+
+
+ACCEPT_FORMAT = ["text", "image", "emoji", "reply", "voice", "command"]

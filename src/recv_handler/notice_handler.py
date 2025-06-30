@@ -7,10 +7,10 @@ from typing import Tuple, Optional
 from src.logger import logger
 from src.config import global_config
 from src.database import BanUser, db_manager, is_identical
-from . import NoticeType
+from . import NoticeType, ACCEPT_FORMAT
 from .message_sending import message_send_instance
 from .message_handler import message_handler
-from maim_message import UserInfo, GroupInfo, Seg, BaseMessageInfo, MessageBase
+from maim_message import FormatInfo, UserInfo, GroupInfo, Seg, BaseMessageInfo, MessageBase
 
 from src.utils import (
     get_group_info,
@@ -151,7 +151,10 @@ class NoticeHandler:
             user_info=user_info,
             group_info=group_info,
             template_info=None,
-            format_info=None,
+            format_info=FormatInfo(
+                content_format=["text", "notify"],
+                accept_format=ACCEPT_FORMAT,
+            ),
             additional_config={"target_id": target_id},  # 在这里塞了一个target_id，方便mmc那边知道被戳的人是谁
         )
 
@@ -170,6 +173,7 @@ class NoticeHandler:
     async def handle_poke_notify(
         self, raw_message: dict, group_id: int, user_id: int
     ) -> Tuple[Seg | None, UserInfo | None]:
+        # sourcery skip: merge-comparisons, merge-duplicate-blocks, remove-redundant-if, remove-unnecessary-else, swap-if-else-branches
         self_info: dict = await get_self_info(self.server_connection)
 
         if not self_info:

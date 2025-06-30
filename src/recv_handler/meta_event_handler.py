@@ -22,7 +22,7 @@ class MetaEventHandler:
             if sub_type == MetaEventType.Lifecycle.connect:
                 self_id = message.get("self_id")
                 self.last_heart_beat = time.time()
-                logger.info(f"Bot {self_id} 连接成功")
+                logger.success(f"Bot {self_id} 连接成功")
                 asyncio.create_task(self.check_heartbeat(self_id))
         elif event_type == MetaEventType.heartbeat:
             if message["status"].get("online") and message["status"].get("good"):
