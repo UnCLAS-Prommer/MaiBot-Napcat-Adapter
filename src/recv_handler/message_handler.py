@@ -370,7 +370,7 @@ class MessageHandler:
         if image_sub_type == 0:
             """这部分认为是图片"""
             return Seg(type="image", data=image_base64)
-        elif image_sub_type in [1, 2, 3, 7, None]:
+        elif image_sub_type not in [4, 9]:
             """这部分认为是表情包"""
             return Seg(type="emoji", data=image_base64)
         else:
