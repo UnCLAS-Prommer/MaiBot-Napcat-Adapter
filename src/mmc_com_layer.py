@@ -1,6 +1,6 @@
 from maim_message import Router, RouteConfig, TargetConfig
 from .config import global_config
-from .logger import logger
+from .logger import logger, custom_logger
 from .send_handler import send_handler
 
 route_config = RouteConfig(
@@ -11,7 +11,7 @@ route_config = RouteConfig(
         )
     }
 )
-router = Router(route_config, logger)
+router = Router(route_config, custom_logger)
 
 
 async def mmc_start_com():
