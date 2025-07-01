@@ -22,10 +22,10 @@ class MessageSending:
             send_status = await self.maibot_router.send_message(message_base)
             if not send_status:
                 raise RuntimeError("可能是路由未正确配置或连接异常")
+            return send_status
         except Exception as e:
             logger.error(f"发送消息失败: {str(e)}")
             logger.error("请检查与MaiBot之间的连接")
-        return send_status
 
 
 message_send_instance = MessageSending()
