@@ -350,6 +350,11 @@ class SendHandler:
         处理AI语音发送命令的逻辑。
         并返回 NapCat 兼容的 (action, params) 元组。
         """
+        if not group_info or not group_info.group_id:
+            raise ValueError("AI语音发送命令必须在群聊上下文中使用")
+        if not args:
+            raise ValueError("AI语音发送命令缺少参数")
+
         group_id: int = int(group_info.group_id)
         character_id = args.get("character")
         text_content = args.get("text")
