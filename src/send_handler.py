@@ -108,6 +108,8 @@ class SendHandler:
                     command, args_dict = self.handle_poke_command(seg_data.get("args"), group_info)
                 case CommandType.DELETE_MSG.name:
                     command, args_dict = self.delete_msg_command(seg_data.get("args"))
+                case CommandType.AI_VOICE_SEND.name:
+                    command, args_dict = self.handle_ai_voice_send_command(seg_data.get("args"), group_info)
                 case _:
                     logger.error(f"未知命令: {command_name}")
                     return
@@ -375,6 +377,32 @@ class SendHandler:
             CommandType.DELETE_MSG.value,
             {
                 "message_id": message_id,
+            },
+        )
+
+    def handle_ai_voice_send_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
+        """
+        处理AI语音发送命令的逻辑。
+        并返回 NapCat 兼容的 (action, params) 元组。
+        """
+        if not group_info or not group_info.group_id:
+            raise ValueError("AI语音发送命令必须在群聊上下文中使用")
+        if not args:
+            raise ValueError("AI语音发送命令缺少参数")
+
+        group_id: int = int(group_info.group_id)
+        character_id = args.get("character")
+        text_content = args.get("text")
+
+        if not character_id or not text_content:
+            raise ValueError(f"AI语音发送命令参数不完整: character='{character_id}', text='{text_content}'")
+
+        return (
+            CommandType.AI_VOICE_SEND.value,
+            {
+                "group_id": group_id,
+                "text": text_content,
+                "character": character_id,
             },
         )
 
