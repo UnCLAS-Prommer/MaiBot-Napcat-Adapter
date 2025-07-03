@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 jobs:
 
@@ -32,7 +32,11 @@ jobs:
     - name: Determine Image Tags
       id: tags
       run: |
-        echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:latest,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:main-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+        if [ "${{ github.ref_name }}" == "main" ]; then
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:latest,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:main-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+        elif [ "${{ github.ref_name }}" == "dev" ]; then
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:dev,${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:dev-$(date -u +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+        fi
 
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v5
@@ -42,8 +46,8 @@ jobs:
         platforms: linux/amd64,linux/arm64
         tags: ${{ steps.tags.outputs.tags }}
         push: true
-        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache
-        cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache,mode=max
+        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache-${{ github.ref_name }}
+        cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/maimbot-adapter:buildcache-${{ github.ref_name }},mode=max
         labels: |
           org.opencontainers.image.created=${{ steps.tags.outputs.date_tag }}
           org.opencontainers.image.revision=${{ github.sha }}
