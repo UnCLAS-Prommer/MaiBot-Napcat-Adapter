@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from datetime import datetime
 
 import tomlkit
 import shutil
@@ -56,11 +57,16 @@ def update_config():
     else:
         logger.info("已有配置文件未检测到版本号，可能是旧版本。将进行更新")
 
+    # 创建备份文件夹
+    backup_dir = "config_backup"
+    os.makedirs(backup_dir, exist_ok=True)
+    
     # 备份文件名
-    old_backup_path = "config.toml.back"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    old_backup_path = os.path.join(backup_dir, f"config.toml.bak.{timestamp}")
 
     # 备份旧配置文件
-    shutil.move(old_config_path, old_backup_path)
+    shutil.copy2(old_config_path, old_backup_path)
     logger.info(f"已备份旧配置文件到: {old_backup_path}")
 
     # 复制模板文件到配置目录
