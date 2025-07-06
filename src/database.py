@@ -49,6 +49,7 @@ class DatabaseManager:
     """
 
     def __init__(self):
+        os.mkdir(os.path.join(os.path.dirname(__file__), "..", "data"), exist_ok=True)  # 确保数据目录存在
         DATABASE_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "NapcatAdapter.db")
         self.sqlite_url = f"sqlite:///{DATABASE_FILE}"  # SQLite 数据库 URL
         self.engine = create_engine(self.sqlite_url, echo=False)  # 创建数据库引擎
