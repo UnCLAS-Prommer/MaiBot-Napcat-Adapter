@@ -175,6 +175,9 @@ class SendHandler:
         elif seg.type == "music":
             song_id = seg.data
             new_payload = self.build_payload(payload, self.handle_music_message(song_id), False)
+        elif seg.type == "videourl":
+            video_url = seg.data
+            new_payload = self.build_payload(payload, self.handle_videourl_message(video_url), False)
         return new_payload
 
     def build_payload(self, payload: list, addon: dict, is_reply: bool = False) -> list:
@@ -250,6 +253,12 @@ class SendHandler:
         return {
             "type": "music",
             "data": {"type": "163", "id": song_id},
+        }
+    def handle_videourl_message(self, video_url: str) -> dict:
+        """处理视频链接消息"""
+        return {
+            "type": "video",
+            "data": {"file": video_url},
         }
 
     def handle_ban_command(self, args: Dict[str, Any], group_info: GroupInfo) -> Tuple[str, Dict[str, Any]]:
