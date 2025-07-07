@@ -300,7 +300,7 @@ class NoticeHandler:
             data={
                 "sub_type": sub_type,
                 "duration": duration,
-                "banned_user_info": banned_user_info,
+                "banned_user_info": banned_user_info.to_dict() if banned_user_info else None,
             },
         )
 
@@ -364,7 +364,7 @@ class NoticeHandler:
             type="notify",
             data={
                 "sub_type": sub_type,
-                "lifted_user_info": lifted_user_info,
+                "lifted_user_info": lifted_user_info.to_dict() if lifted_user_info else None,
             },
         )
         return seg_data, operator_info
@@ -463,7 +463,7 @@ class NoticeHandler:
             type="notify",
             data={
                 "sub_type": "lift_ban",
-                "lifted_user_info": lifted_user_info,
+                "lifted_user_info": lifted_user_info.to_dict(),
             },
         )
 
