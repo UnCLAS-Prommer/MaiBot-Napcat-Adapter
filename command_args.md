@@ -57,4 +57,4 @@ Seg.data: Dict[str, Any] = {
     }
 }
 ```
-message_id怎么搞到手全凭你本事，也请在自己的插件里写好确定是否能撤回对应的消息的功能，毕竟这玩意真的单纯根据message_id撤消息
+其中message_id是消息的实际qq_id，于新版的mmc中可以从数据库获取（如果工作正常的话）

@@ -60,7 +60,7 @@ def update_config():
     # 创建备份文件夹
     backup_dir = "config_backup"
     os.makedirs(backup_dir, exist_ok=True)
-    
+
     # 备份文件名
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     old_backup_path = os.path.join(backup_dir, f"config.toml.bak.{timestamp}")
