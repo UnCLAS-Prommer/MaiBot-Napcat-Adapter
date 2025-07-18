@@ -422,8 +422,14 @@ class MessageHandler:
         """
         message_data: dict = raw_message.get("data")
         file: str = message_data.get("file")
+        if not file:
+            logger.warning("语音消息缺少文件信息")
+            return None
         try:
             record_detail = await get_record_detail(self.server_connection, file)
+            if not record_detail:
+                logger.warning("获取语音消息详情失败")
+                return None
             audio_base64: str = record_detail.get("base64")
         except Exception as e:
             logger.error(f"语音消息处理失败: {str(e)}")
