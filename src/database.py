@@ -123,14 +123,26 @@ class DatabaseManager:
         其同时还是简化版的更新方式。
         """
         with Session(self.engine) as session:
-            db_record = DB_BanUser(
-                user_id=ban_record.user_id, group_id=ban_record.group_id, lift_time=ban_record.lift_time
+            # 检查记录是否已存在
+            statement = select(DB_BanUser).where(
+                DB_BanUser.user_id == ban_record.user_id, DB_BanUser.group_id == ban_record.group_id
             )
-            session.add(db_record)
+            existing_record = session.exec(statement).first()
+            if existing_record:
+                # 如果记录已存在，更新 lift_time
+                existing_record.lift_time = ban_record.lift_time
+                session.add(existing_record)
+                logger.debug(f"更新禁言记录: {ban_record}")
+            else:
+                # 如果记录不存在，创建新记录
+                db_record = DB_BanUser(
+                    user_id=ban_record.user_id, group_id=ban_record.group_id, lift_time=ban_record.lift_time
+                )
+                session.add(db_record)
+                logger.debug(f"创建新禁言记录: {ban_record}")
             session.commit()
-            logger.debug(f"创建/更新禁言记录: {ban_record}")
 
-    def delete_ban_record(self, ban_record: BanUser) -> bool:
+    def delete_ban_record(self, ban_record: BanUser):
         """
         删除特定用户在特定群组中的禁言记录。
         一个简化版本的删除方式，防止 update_ban_record 方法的复杂性。
