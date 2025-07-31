@@ -208,7 +208,7 @@ async def get_message_detail(websocket: Server.ServerConnection, message_id: Uni
     payload = json.dumps({"action": "get_msg", "params": {"message_id": message_id}, "echo": request_uuid})
     try:
         await websocket.send(payload)
-        response: dict = await get_response(request_uuid)
+        response: dict = await get_response(request_uuid, 30)  # 增加超时时间到30秒
     except TimeoutError:
         logger.error(f"获取消息详情超时，消息ID: {message_id}")
         return None
@@ -242,7 +242,7 @@ async def get_record_detail(
     )
     try:
         await websocket.send(payload)
-        response: dict = await get_response(request_uuid)
+        response: dict = await get_response(request_uuid, 30)  # 增加超时时间到30秒
     except TimeoutError:
         logger.error(f"获取语音消息详情超时，文件: {file}, 文件ID: {file_id}")
         return None
