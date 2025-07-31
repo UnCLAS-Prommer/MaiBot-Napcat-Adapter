@@ -60,20 +60,6 @@ class MessageHandler:
             bool: 是否允许聊天
         """
         logger.debug(f"群聊id: {group_id}, 用户id: {user_id}")
-        if global_config.chat.ban_qq_bot and group_id and not ignore_bot:
-            logger.debug("开始判断是否为机器人")
-            member_info = await get_member_info(self.server_connection, group_id, user_id)
-            if member_info:
-                is_bot = member_info.get("is_robot")
-                if is_bot is None:
-                    logger.warning("无法获取用户是否为机器人，默认为不是但是不进行更新")
-                else:
-                    if is_bot:
-                        logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃，新机器人加入拦截名单")
-                        self.bot_id_list[user_id] = True
-                        return False
-                    else:
-                        self.bot_id_list[user_id] = False
         logger.debug("开始检查聊天白名单/黑名单")
         if group_id:
             if global_config.chat.group_list_type == "whitelist" and group_id not in global_config.chat.group_list:
@@ -92,6 +78,22 @@ class MessageHandler:
         if user_id in global_config.chat.ban_user_id and not ignore_global_list:
             logger.warning("用户在全局黑名单中，消息被丢弃")
             return False
+
+        if global_config.chat.ban_qq_bot and group_id and not ignore_bot:
+            logger.debug("开始判断是否为机器人")
+            member_info = await get_member_info(self.server_connection, group_id, user_id)
+            if member_info:
+                is_bot = member_info.get("is_robot")
+                if is_bot is None:
+                    logger.warning("无法获取用户是否为机器人，默认为不是但是不进行更新")
+                else:
+                    if is_bot:
+                        logger.warning("QQ官方机器人消息拦截已启用，消息被丢弃，新机器人加入拦截名单")
+                        self.bot_id_list[user_id] = True
+                        return False
+                    else:
+                        self.bot_id_list[user_id] = False
+
         return True
 
     async def handle_raw_message(self, raw_message: dict) -> None:
@@ -422,8 +424,14 @@ class MessageHandler:
         """
         message_data: dict = raw_message.get("data")
         file: str = message_data.get("file")
+        if not file:
+            logger.warning("语音消息缺少文件信息")
+            return None
         try:
             record_detail = await get_record_detail(self.server_connection, file)
+            if not record_detail:
+                logger.warning("获取语音消息详情失败")
+                return None
             audio_base64: str = record_detail.get("base64")
         except Exception as e:
             logger.error(f"语音消息处理失败: {str(e)}")
