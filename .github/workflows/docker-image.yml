@@ -3,6 +3,7 @@ name: Docker Image CI
 on:
   push:
     branches: [ "main", "dev" ]
+  workflow_dispatch: # 允许手动触发工作流
 
 jobs:
 
