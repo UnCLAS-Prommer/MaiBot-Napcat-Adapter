@@ -205,9 +205,23 @@ class MessageHandler:
                 logger.warning(f"群聊消息类型 {sub_type} 不支持")
                 return None
 
-        additional_config: dict = {}
+        # 处理实际信息
+        if not raw_message.get("message"):
+            logger.warning("原始消息内容为空")
+            return None
+
+        # 获取Seg列表
+        seg_message, additional_config = await self.handle_real_message(raw_message)
         if global_config.voice.use_tts:
             additional_config["allow_tts"] = True
+
+        if not seg_message:
+            logger.warning("处理后消息内容为空")
+            return None
+        submit_seg: Seg = Seg(
+            type="seglist",
+            data=seg_message,
+        )
 
         # 消息信息
         message_info: BaseMessageInfo = BaseMessageInfo(
@@ -221,20 +235,6 @@ class MessageHandler:
             additional_config=additional_config,
         )
 
-        # 处理实际信息
-        if not raw_message.get("message"):
-            logger.warning("原始消息内容为空")
-            return None
-
-        # 获取Seg列表
-        seg_message: List[Seg] = await self.handle_real_message(raw_message)
-        if not seg_message:
-            logger.warning("处理后消息内容为空")
-            return None
-        submit_seg: Seg = Seg(
-            type="seglist",
-            data=seg_message,
-        )
         # MessageBase创建
         message_base: MessageBase = MessageBase(
             message_info=message_info,
@@ -245,7 +245,9 @@ class MessageHandler:
         logger.info("发送到Maibot处理信息")
         await message_send_instance.message_send(message_base)
 
-    async def handle_real_message(self, raw_message: dict, in_reply: bool = False) -> List[Seg] | None:
+    async def handle_real_message(
+        self, raw_message: dict, in_reply: bool = False
+    ) -> Tuple[List[Seg] | None, Dict[str, Any]]:
         # sourcery skip: low-code-quality
         """
         处理实际消息
@@ -254,6 +256,7 @@ class MessageHandler:
         Returns:
             seg_message: list[Seg]: 处理后的消息段列表
         """
+        additional_config: dict = {}
         real_message: list = raw_message.get("message")
         if not real_message:
             return None
@@ -276,7 +279,7 @@ class MessageHandler:
                         logger.warning("face处理失败或不支持")
                 case RealMessageType.reply:
                     if not in_reply:
-                        ret_seg = await self.handle_reply_message(sub_message)
+                        ret_seg, additional_config = await self.handle_reply_message(sub_message, additional_config)
                         if ret_seg:
                             seg_message += ret_seg
                         else:
@@ -330,7 +333,7 @@ class MessageHandler:
                     logger.warning("不支持转发消息节点解析")
                 case _:
                     logger.warning(f"未知消息类型: {sub_message_type}")
-        return seg_message
+        return seg_message, additional_config
 
     async def handle_text_message(self, raw_message: dict) -> Seg:
         """
@@ -441,7 +444,7 @@ class MessageHandler:
             return None
         return Seg(type="voice", data=audio_base64)
 
-    async def handle_reply_message(self, raw_message: dict) -> List[Seg] | None:
+    async def handle_reply_message(self, raw_message: dict, additional_config: dict) -> Tuple[List[Seg] | None, dict]:
         # sourcery skip: move-assign-in-block, use-named-expression
         """
         处理回复消息
@@ -453,11 +456,12 @@ class MessageHandler:
             message_id = raw_message_data.get("id")
         else:
             return None
+        additional_config["reply_message_id"] = message_id
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
             return None
-        reply_message = await self.handle_real_message(message_detail, in_reply=True)
+        reply_message, _ = await self.handle_real_message(message_detail, in_reply=True)
         if reply_message is None:
             reply_message = "(获取发言内容失败)"
         sender_info: dict = message_detail.get("sender")
@@ -471,7 +475,7 @@ class MessageHandler:
             seg_message.append(Seg(type="text", data=f"[回复<{sender_nickname}:{sender_id}>："))
         seg_message += reply_message
         seg_message.append(Seg(type="text", data="]，说："))
-        return seg_message
+        return seg_message, additional_config
 
     async def handle_forward_message(self, message_list: list) -> Seg | None:
         """
