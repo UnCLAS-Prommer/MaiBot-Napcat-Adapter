@@ -84,4 +84,17 @@ class CommandType(Enum):
         return self.value
 
 
-ACCEPT_FORMAT = ["text", "image", "emoji", "reply", "voice", "command", "voiceurl", "music", "videourl", "file", "forward"]
+ACCEPT_FORMAT = [
+    "text",
+    "image",
+    "emoji",
+    "reply",
+    "voice",
+    "command",
+    "voiceurl",
+    "music",
+    "videourl",
+    "file",
+    "imageurl",
+    "forward",
+]

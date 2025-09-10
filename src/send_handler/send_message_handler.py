@@ -62,6 +62,9 @@ class SendMessageHandleClass:
         elif seg.type == "file":
             file_path = seg.data
             new_payload = cls.build_payload(payload, cls.handle_file_message(file_path), False)
+        elif seg.type == "imageurl":
+            image_url = seg.data
+            new_payload = cls.build_payload(payload, cls.handle_imageurl_message(image_url), False)
         elif seg.type == "forward" and not in_forward:
             forward_message_content: List[Dict] = seg.data
             new_payload: List[Dict] = [
@@ -185,4 +188,12 @@ class SendMessageHandleClass:
         return {
             "type": "file",
             "data": {"file": f"file://{file_path}"},
+        }
+
+    @staticmethod
+    def handle_imageurl_message(image_url: str) -> dict:
+        """处理图片链接消息"""
+        return {
+            "type": "image",
+            "data": {"file": image_url},
         }
