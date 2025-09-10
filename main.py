@@ -50,11 +50,11 @@ async def main():
     message_send_instance.maibot_router = router
     _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process(), check_timeout_response())
 
-def check_napcat_server_token(path, request_headers):
+def check_napcat_server_token(path, request):
     token = global_config.napcat_server.token
     if not token or token.strip() == "":
         return
-    auth_header = request_headers.get("Authorization")
+    auth_header = request.headers.get("Authorization")
     if auth_header != f"Bearer {token}":
         return http.HTTPStatus.UNAUTHORIZED, [], b"Unauthorized\n"
 
