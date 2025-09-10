@@ -60,7 +60,7 @@ def check_napcat_server_token(path, request_headers):
 
 async def napcat_server():
     logger.info("正在启动adapter...")
-    async with Server.serve(message_recv, global_config.napcat_server.host, global_config.napcat_server.port, max_size=2**26, process_headers=check_napcat_server_token) as server:
+    async with Server.serve(message_recv, global_config.napcat_server.host, global_config.napcat_server.port, max_size=2**26, process_request=check_napcat_server_token) as server:
         logger.info(
             f"Adapter已启动，监听地址: ws://{global_config.napcat_server.host}:{global_config.napcat_server.port}"
         )
