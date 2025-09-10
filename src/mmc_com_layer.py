@@ -1,7 +1,7 @@
 from maim_message import Router, RouteConfig, TargetConfig
 from .config import global_config
 from .logger import logger, custom_logger
-from .send_handler import send_handler
+from .send_handler.main_send_handler import send_handler
 
 route_config = RouteConfig(
     route_config={

@@ -7,7 +7,7 @@ from src.recv_handler.message_handler import message_handler
 from src.recv_handler.meta_event_handler import meta_event_handler
 from src.recv_handler.notice_handler import notice_handler
 from src.recv_handler.message_sending import message_send_instance
-from src.send_handler import send_handler
+from src.send_handler.nc_sending import nc_message_sender
 from src.config import global_config
 from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
 from src.response_pool import put_response, check_timeout_response
@@ -18,7 +18,7 @@ message_queue = asyncio.Queue()
 async def message_recv(server_connection: Server.ServerConnection):
     await message_handler.set_server_connection(server_connection)
     asyncio.create_task(notice_handler.set_server_connection(server_connection))
-    await send_handler.set_server_connection(server_connection)
+    await nc_message_sender.set_server_connection(server_connection)
     async for raw_message in server_connection:
         logger.debug(f"{raw_message[:1500]}..." if (len(raw_message) > 1500) else raw_message)
         decoded_raw_message: dict = json.loads(raw_message)
