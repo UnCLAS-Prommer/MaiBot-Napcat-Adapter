@@ -28,6 +28,9 @@ class NapcatServerConfig(ConfigBase):
     port: int = 8095
     """Napcat服务端的端口号"""
 
+    token: str = ""
+    """Napcat服务端的访问令牌，若无则留空"""
+
     heartbeat_interval: int = 30
     """Napcat心跳间隔时间，单位为秒"""
 
