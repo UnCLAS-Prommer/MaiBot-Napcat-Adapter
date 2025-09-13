@@ -56,7 +56,11 @@ def check_napcat_server_token(conn, request):
         return None
     auth_header = request.headers.get("Authorization")
     if auth_header != f"Bearer {token}":
-        return Server.Response(http.HTTPStatus.UNAUTHORIZED, "", headers=Server.Headers([("Content-Type", "text/plain")]), body=b"Unauthorized\n")
+        return Server.Response(
+            status=http.HTTPStatus.UNAUTHORIZED,
+            headers=Server.Headers([("Content-Type", "text/plain")]),
+            body=b"Unauthorized\n"
+        )
     return None
 
 async def napcat_server():
