@@ -83,7 +83,7 @@ class SendMessageHandleClass:
             return {"type": "node", "data": {"id": message_segment.data}}
         else:
             user_info = item.message_info.user_info
-            content = cls.process_seg_recursive(message_segment.data, True)
+            content = cls.process_seg_recursive(message_segment, True)
             return {
                 "type": "node",
                 "data": {"name": user_info.user_nickname or "QQ用户", "uin": user_info.user_id, "content": content},
