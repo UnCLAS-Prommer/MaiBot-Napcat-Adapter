@@ -97,4 +97,5 @@ ACCEPT_FORMAT = [
     "file",
     "imageurl",
     "forward",
+    "video",
 ]
