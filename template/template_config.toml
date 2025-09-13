@@ -8,6 +8,7 @@ nickname = ""
 [napcat_server] # Napcat连接的ws服务设置
 host = "localhost"      # Napcat设定的主机地址
 port = 8095             # Napcat设定的端口 
+token = ""              # Napcat设定的访问令牌，若无则留空
 heartbeat_interval = 30 # 与Napcat设置的心跳相同（按秒计）
 
 [maibot_server] # 连接麦麦的ws服务设置
