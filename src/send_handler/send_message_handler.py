@@ -65,6 +65,9 @@ class SendMessageHandleClass:
         elif seg.type == "imageurl":
             image_url = seg.data
             new_payload = cls.build_payload(payload, cls.handle_imageurl_message(image_url), False)
+        elif seg.type == "video":
+            video_path = seg.data
+            new_payload = cls.build_payload(payload, cls.handle_video_message(video_path), False)
         elif seg.type == "forward" and not in_forward:
             forward_message_content: List[Dict] = seg.data
             new_payload: List[Dict] = [
@@ -196,4 +199,18 @@ class SendMessageHandleClass:
         return {
             "type": "image",
             "data": {"file": image_url},
+        }
+
+    @staticmethod
+    def handle_video_message(encoded_video: str) -> dict:
+        """处理视频消息（base64格式）"""
+        if not encoded_video:
+            logger.error("视频数据为空")
+            return {}
+            
+        logger.info(f"处理视频消息，数据长度: {len(encoded_video)} 字符")
+        
+        return {
+            "type": "video",
+            "data": {"file": f"base64://{encoded_video}"},
         }
