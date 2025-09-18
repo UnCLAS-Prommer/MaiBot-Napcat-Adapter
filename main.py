@@ -45,7 +45,6 @@ async def message_process():
         else:
             logger.warning(f"未知的post_type: {post_type}")
         message_queue.task_done()
-        await asyncio.sleep(0.05)
 
 
 async def main():
