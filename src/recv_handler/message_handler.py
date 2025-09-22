@@ -259,7 +259,8 @@ class MessageHandler:
         additional_config: dict = {}
         real_message: list = raw_message.get("message")
         if not real_message:
-            return None
+            logger.warning("实际消息内容为空")
+            return None, {}
         seg_message: List[Seg] = []
         for sub_message in real_message:
             sub_message: dict
