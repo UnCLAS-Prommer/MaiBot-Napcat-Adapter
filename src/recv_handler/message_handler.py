@@ -324,7 +324,7 @@ class MessageHandler:
                     messages = await self._get_forward_message(sub_message)
                     if not messages:
                         logger.warning("转发消息内容为空或获取失败")
-                        return None
+                        return None, {}
                     ret_seg = await self.handle_forward_message(messages)
                     if ret_seg:
                         seg_message.append(ret_seg)
@@ -456,12 +456,12 @@ class MessageHandler:
         if raw_message_data:
             message_id = raw_message_data.get("id")
         else:
-            return None
+            return None, {}
         additional_config["reply_message_id"] = message_id
         message_detail: dict = await get_message_detail(self.server_connection, message_id)
         if not message_detail:
             logger.warning("获取被引用的消息详情失败")
-            return None
+            return None, {}
         reply_message, _ = await self.handle_real_message(message_detail, in_reply=True)
         if reply_message is None:
             reply_message = "(获取发言内容失败)"
